@@ -8,28 +8,19 @@ primary_region = "gru"
   NODE_ENV = "production"
   PORT = "3000"
   VITE_SUPABASE_URL = "https://jgigqdpdjgnnuwajtayh.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnaWdxZHBkamdubnV3YWp0YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNjgyNTUsImV4cCI6MjA2Nzg0NDI1NX0.pUKKcg21KyHnMCcq7EOXweeLWUBKOixkafe-aBCNqwo"
-
-[[vm]]
-  cpu_kind = "shared"
-  cpus = 1
-  memory_mb = 512
-
+  
 [http_service]
   internal_port = 3000
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
   min_machines_running = 0
+  processes = ["app"]
 
   [http_service.concurrency]
-    type = "requests"
-    hard_limit = 100
-    soft_limit = 80
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
 
-  [[http_service.checks]]
-    grace_period = "10s"
-    interval = "30s"
-    method = "GET"
-    timeout = "5s"
-    path = "/"
+[processes]
+  app = "npm run start"
