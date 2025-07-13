@@ -21,14 +21,5 @@ primary_region = "gru"
     hard_limit = 25
     soft_limit = 20
 
-[[vm]]
-  cpu_kind = "shared"
-  cpus = 1
-  memory_mb = 512
-
 [processes]
   app = "npm run start"
-
-[[statics]]
-  guest_path = "/app/build/client"
-  url_prefix = "/assets/"
