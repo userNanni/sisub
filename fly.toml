@@ -7,6 +7,8 @@ primary_region = "gru"
 [env]
   NODE_ENV = "production"
   PORT = "3000"
+  VITE_SUPABASE_URL = "https://jgigqdpdjgnnuwajtayh.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnaWdxZHBkamdubnV3YWp0YXloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNjgyNTUsImV4cCI6MjA2Nzg0NDI1NX0.pUKKcg21KyHnMCcq7EOXweeLWUBKOixkafe-aBCNqwo"
 
 [http_service]
   internal_port = 3000
