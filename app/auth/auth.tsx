@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, type JSX } from 'react';
 import supabase from '@/utils/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -12,6 +12,11 @@ interface AuthContextType {
   signUp: (email: string, password: string, metadata?: { name?: string }) => Promise<void>;
   signOut: () => Promise<void>;
 }
+
+export type HeaderProps = {
+  user: User | null;
+  handleSignOut: () => Promise<JSX.Element | undefined>;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
