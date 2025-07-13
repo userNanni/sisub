@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,14 @@ import {
 } from "lucide-react";
 import supabase from "@/utils/supabase";
 import Footer from "~/components/Footer";
+import type { Route } from "./+types/confirm-email";
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Confirmação de Email" },
+    { name: "description", content: "confirme seu email" },
+  ];
+}
 
 export default function ConfirmEmail() {
   const [searchParams] = useSearchParams();

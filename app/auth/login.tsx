@@ -7,6 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock } from "lucide-react";
+import type { Route } from "./+types/login";
+
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Login" },
+    { name: "description", content: "entrar no sistema" },
+  ];
+}
 
 export default function Login() {
   const [email, setEmail] = useState("");

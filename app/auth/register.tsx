@@ -7,6 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock, User } from "lucide-react";
+import type { Route } from "./+types/register";
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Registre-se" },
+    { name: "description", content: "Registre-se no sistema" },
+  ];
+}
 
 export default function Register() {
   const [name, setName] = useState("");

@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../auth/auth";
 import supabase from "@/utils/supabase";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Coffee, Utensils, Moon, Sun, Users, Loader2, CheckCircle, Building2 } from "lucide-react";
+import { Calendar, Coffee, Utensils, Moon, Sun, Loader2, CheckCircle, Building2 } from "lucide-react";
+import type { Route } from "./+types/rancho";
 
 type MealType = 'cafe' | 'almoco' | 'janta' | 'ceia';
 
@@ -23,6 +23,13 @@ interface RanchoPrevisao {
 
 interface DayMeals {
   [key: string]: boolean; // cafe, almoco, janta, ceia
+}
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Previsão" },
+    { name: "description", content: "Faça sua previsão" },
+  ];
 }
 
 export default function Rancho() {
