@@ -48,7 +48,7 @@ export default function Rancho() {
   const mealTypes = [
     { value: 'cafe', label: 'Café', icon: Coffee, color: 'bg-orange-100 text-orange-800' },
     { value: 'almoco', label: 'Almoço', icon: Utensils, color: 'bg-green-100 text-green-800' },
-    { value: 'janta', label: 'Janta', icon: Moon, color: 'bg-blue-100 text-blue-800' },
+    { value: 'janta', label: 'Jantar', icon: Moon, color: 'bg-blue-100 text-blue-800' },
     { value: 'ceia', label: 'Ceia', icon: Sun, color: 'bg-purple-100 text-purple-800' },
   ] as const;
 
