@@ -308,9 +308,9 @@ export default function Rancho() {
             const isToday = date === todayString;
 
             const targetDate = new Date();
-            targetDate.setDate(targetDate.getDate() + 3);
+            targetDate.setDate(targetDate.getDate() + 2);
 
-            const isNear = new Date(date + "T03:00:00") <= targetDate;
+            const isNear = new Date(date + "T00:00:00") <= targetDate;
 
             return (
               <Card
