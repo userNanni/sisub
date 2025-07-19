@@ -50,9 +50,9 @@ export default function Home() {
     },
     {
       icon: Building2,
-      title: "Por unidade militar",
+      title: "Por Organização Militar",
       description:
-        "Sistema organizado por unidade, facilitando o controle e gestão do rancho.",
+        "Sistema organizado por OM, facilitando o controle e gestão do rancho.",
     },
     {
       icon: Smartphone,
@@ -92,7 +92,7 @@ export default function Home() {
             </Badge>
           </div>
 
-          <h1 className="text-7xl md:text-8xl font-bold text-gray-900 leading-tight">
+          <h1 className="text-5xl md:text-6xl lg:text-8xl k2d-extrabold font-bold text-gray-900 leading-tight">
             Sistema de
             <span className="text-blue-600 block">Subsistência</span>
           </h1>
@@ -260,7 +260,7 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Pronto para começar?</h2>
           <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
-            Faça parte da modernização do sistema de rancho militar. Acesse
+            Faça parte da modernização do SISUB. Acesse
             agora e comece a planejar suas refeições de forma inteligente.
           </p>
 
