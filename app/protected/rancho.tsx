@@ -329,7 +329,7 @@ const MealButton = memo<MealButtonProps>(({ meal, isSelected, onToggle, disabled
       onClick={onToggle}
       disabled={disabled}
       className={`
-        w-full p-3 rounded-lg border-2 transition-all duration-200
+        w-full p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer
         ${isSelected
           ? "border-green-500 bg-green-50 shadow-sm"
           : "border-gray-200 hover:border-gray-300 bg-white"
@@ -464,12 +464,12 @@ const DayCard = memo<DayCardProps>(({
             {hasDefaultUnit && <span className="text-xs text-orange-600">(padrão)</span>}
           </Label>
           <Select value={dayUnit} onValueChange={handleUnitChange} disabled={isNear}>
-            <SelectTrigger className={`w-full ${hasDefaultUnit ? "border-orange-200 bg-orange-50" : ""}`}>
+            <SelectTrigger className={`w-full cursor-pointer ${hasDefaultUnit ? "border-orange-200 bg-orange-50" : ""}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {UNIDADES_DISPONIVEIS.map((unidade) => (
-                <SelectItem key={unidade.value} value={unidade.value}>
+                <SelectItem className="cursor-pointer" key={unidade.value} value={unidade.value}>
                   {unidade.label}
                 </SelectItem>
               ))}
@@ -846,10 +846,11 @@ export default function Rancho() {
         <div className="flex items-center space-x-4">
           {cardsWithoutUnit.length > 0 && (
             <Button
+            
               variant="outline"
               size="sm"
               onClick={() => setShowDefaultUnitSelector(!showDefaultUnitSelector)}
-              className="text-orange-600 border-orange-600 hover:bg-orange-50"
+              className="text-orange-600 border-orange-600 hover:bg-orange-50 cursor-pointer"
             >
               <Settings className="h-4 w-4 mr-2" />
               Unidade Padrão ({cardsWithoutUnit.length})
@@ -861,6 +862,7 @@ export default function Rancho() {
             size="sm"
             onClick={loadExistingPrevisoes}
             disabled={isLoading}
+            className="cursor-pointer"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
@@ -885,12 +887,12 @@ export default function Rancho() {
                 Selecione a unidade padrão:
               </Label>
               <Select value={defaultUnit} onValueChange={setDefaultUnit}>
-                <SelectTrigger className="w-full border-orange-200 focus:border-orange-400">
+                <SelectTrigger className="w-full cursor-pointer border-orange-200 focus:border-orange-400">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {UNIDADES_DISPONIVEIS.map((unidade) => (
-                    <SelectItem key={unidade.value} value={unidade.value}>
+                    <SelectItem className="cursor-pointer" key={unidade.value} value={unidade.value}>
                       {unidade.label}
                     </SelectItem>
                   ))}
@@ -907,7 +909,7 @@ export default function Rancho() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowDefaultUnitSelector(false)}
-                  className="border-orange-200 text-orange-700 hover:bg-orange-100"
+                  className="border-orange-200 text-orange-700 hover:bg-orange-100 cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -915,7 +917,7 @@ export default function Rancho() {
                   size="sm"
                   onClick={applyDefaultUnitToAll}
                   disabled={isApplyingDefaultUnit || cardsWithoutUnit.length === 0}
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                  className="bg-orange-600 hover:bg-orange-700 text-white cursor-pointer"
                 >
                   {isApplyingDefaultUnit ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -943,7 +945,7 @@ export default function Rancho() {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
             {error}
-            <Button variant="ghost" size="sm" onClick={clearMessages}>
+            <Button variant="ghost" size="sm" onClick={clearMessages} className="cursor-pointer">
               ✕
             </Button>
           </AlertDescription>
@@ -1011,7 +1013,7 @@ export default function Rancho() {
           <Button
             onClick={savePendingChanges}
             disabled={isSavingBatch}
-            className="shadow-lg"
+            className="shadow-lg cursor-pointer"
             size="lg"
           >
             {isSavingBatch ? (
