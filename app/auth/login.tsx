@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./auth";
-import { AuthError } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +16,8 @@ const FAB_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@fab\.mil\.br$/;
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Login - Sistema FAB" },
-    { name: "description", content: "Entrar no sistema da Força Aérea Brasileira" },
+    { title: "Login - SISUB" },
+    { name: "description", content: "Entrar no SISUB" },
   ];
 }
 

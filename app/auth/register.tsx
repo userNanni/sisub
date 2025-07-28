@@ -55,10 +55,10 @@ const getPasswordStrength = (password: string) => {
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Registre-se - Sistema FAB" },
+    { title: "Registre-se - SISUB" },
     {
       name: "description",
-      content: "Criar conta no sistema da Força Aérea Brasileira",
+      content: "Criar conta no SISUB",
     },
   ];
 }

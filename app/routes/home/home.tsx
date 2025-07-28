@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
+import Footer from "~/components/Footer";
+import { steps, mealTypes, features } from "./homeData";
+import HomeHero from "~/components/HomeHero";
+import type { Route } from "./+types/home";
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Previsão SISUB" },
+    { name: "description", content: "Ajude a melhorar o SISUB" },
+  ];
+}
 
 export default function Home() {
   const [currentFeature, setCurrentFeature] = useState(0);
@@ -31,148 +42,12 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  const features = [
-    {
-      icon: "📅",
-      title: "Planejamento de 30 dias",
-      description:
-        "Visualize e planeje suas refeições para os próximos 30 dias de forma simples e intuitiva.",
-      color: "from-blue-500 to-blue-600",
-    },
-    {
-      icon: "🍽️",
-      title: "4 tipos de refeição",
-      description:
-        "Café da manhã, almoço, janta e ceia - marque quais refeições você irá consumir.",
-      color: "from-green-500 to-green-600",
-    },
-    {
-      icon: "🏢",
-      title: "Por Organização Militar",
-      description:
-        "Sistema organizado por OM, facilitando o controle e gestão do rancho.",
-      color: "from-purple-500 to-purple-600",
-    },
-    {
-      icon: "📱",
-      title: "Interface responsiva",
-      description:
-        "Acesse de qualquer dispositivo - computador, tablet ou smartphone.",
-      color: "from-orange-500 to-orange-600",
-    },
-    {
-      icon: "🛡️",
-      title: "Seguro e confiável",
-      description:
-        "Autenticação segura e dados protegidos com tecnologia Supabase.",
-      color: "from-red-500 to-red-600",
-    },
-    {
-      icon: "📊",
-      title: "Controle de demanda",
-      description:
-        "Ajude a administração a prever a demanda e reduzir o desperdício de alimentos.",
-      color: "from-indigo-500 to-indigo-600",
-    },
-  ];
-
-  const mealTypes = [
-    {
-      icon: "☕",
-      label: "Café da Manhã",
-      color: "bg-orange-100 text-orange-600",
-      time: "06:00 - 08:00",
-    },
-    {
-      icon: "🍽️",
-      label: "Almoço",
-      color: "bg-green-100 text-green-600",
-      time: "11:30 - 13:30",
-    },
-    {
-      icon: "🌙",
-      label: "Janta",
-      color: "bg-blue-100 text-blue-600",
-      time: "18:00 - 20:00",
-    },
-    {
-      icon: "🌅",
-      label: "Ceia",
-      color: "bg-purple-100 text-purple-600",
-      time: "21:00 - 22:00",
-    },
-  ];
-
-  const steps = [
-    {
-      icon: "🔐",
-      title: "Faça Login",
-      description:
-        "Acesse o sistema com suas credenciais militares de forma segura através da autenticação Supabase.",
-      color: "border-blue-200 hover:border-blue-400",
-    },
-    {
-      icon: "📅",
-      title: "Selecione os Dias",
-      description:
-        "Visualize os próximos 30 dias em cards organizados e selecione as refeições que irá consumir.",
-      color: "border-green-200 hover:border-green-400",
-    },
-    {
-      icon: "✅",
-      title: "Confirme Automaticamente",
-      description:
-        "Suas seleções são salvas automaticamente, ajudando na previsão de demanda do rancho.",
-      color: "border-purple-200 hover:border-purple-400",
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      {/* Hero Section com animação */}
-      <div
-        id="hero"
-        className={`container mx-auto px-4 py-16 transition-all duration-500 ${
-          isVisible.hero
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-10"
-        }`}
-      >
-        <div className="text-center space-y-6 max-w-4xl mx-auto">
-          <div className="flex justify-center">
-            <span className="bg-blue-100 text-blue-800 px-4 py-2 text-sm font-medium rounded-full animate-pulse">
-              Sistema de Previsão de Rancho
-            </span>
-          </div>
+      {/* Hero Section */}
+      {HomeHero(isVisible)}
 
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
-            Sistema de
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600 block animate-pulse">
-              Subsistência
-            </span>
-          </h1>
-
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Sistema inteligente para previsão de demanda do rancho. Planeje suas
-            refeições, reduza desperdícios e otimize a gestão alimentar.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6">
-            <Link to="/login">
-              <button className="bg-gradient-to-r cursor-pointer from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-3 text-lg font-semibold rounded-lg transition-all duration-150 transform hover:scale-105 shadow-lg hover:shadow-xl">
-                Acessar Sistema →
-              </button>
-            </Link>
-
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <span className="text-green-500">🛡️</span>
-              <span>Login seguro necessário</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Como Funciona com animação */}
+      {/* Como Funciona */}
       <div
         id="steps"
         className={`container mx-auto px-4 py-16 transition-all duration-500 delay-100 ${
@@ -317,7 +192,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CTA Final com animação */}
+      {/* CTA Final */}
       <div
         id="cta"
         className={`bg-gradient-to-r from-blue-600 to-blue-700 text-white py-16 transition-all duration-500 delay-250 ${
@@ -355,13 +230,8 @@ export default function Home() {
       </div>
 
       {/* Footer simples */}
-      <footer className="bg-gray-900 text-white py-8 z-500">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-gray-400">
-            © 2025 Sistema de Subsistência. Todos os direitos reservados.
-          </p>
-        </div>
-      </footer>
+      {Footer()}
     </div>
   );
 }
+

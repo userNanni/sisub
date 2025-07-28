@@ -38,6 +38,7 @@ import {
   CalendarDays,
   Settings,
 } from "lucide-react";
+import type { Route } from "./+types/rancho";
 
 // Tipos melhorados
 type MealType = "cafe" | "almoco" | "janta" | "ceia";
@@ -214,6 +215,13 @@ interface MilitaryStatsProps {
   selections: Record<string, DayMeals>;
   dayUnits: DayUnits;
   dates: readonly string[];
+}
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Previsão SISUB" },
+    { name: "description", content: "faça seu raçoamento" },
+  ];
 }
 
 const MilitaryStats = memo<MilitaryStatsProps>(({ selections, dayUnits, dates }) => {
