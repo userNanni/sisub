@@ -5,7 +5,7 @@ import type { AuthContextType } from "~/auth/auth";
 
 interface RanchoHeaderProps {
   user: AuthContextType["user"];
-  signOut: () => Promise<JSX.Element>;
+  signOut: () => Promise<JSX.Element> | Promise<void>;
 }
 
 export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {

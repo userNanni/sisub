@@ -137,8 +137,8 @@ export default function Register() {
   const hasErrors = Object.values(fieldErrors).some((error) => error !== "");
   const isFormValid =
     Object.values(formData).every((value) => value.trim() !== "") &&
-    !hasErrors &&
-    acceptTerms;
+    !hasErrors/*  &&
+    acceptTerms */;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
