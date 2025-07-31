@@ -14,24 +14,12 @@ export interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  userRole?: "admin" | "user";
-  profile?: UserProfile;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshSession: () => Promise<void>;
   deleteAccount: () => Promise<void>;
-}
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  avatar_url?: string;
-  role: "admin" | "user";
-  created_at: string;
-  updated_at: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,89 +30,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [userRole, setUserRole] = useState<"admin" | "user">();
-  const [profile, setProfile] = useState<UserProfile>();
-
-  // Fetch user role and profile from database
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user profile:", error);
-        setUserRole("user");
-        return;
-      }
-
-      if (data) {
-        setProfile(data);
-        setUserRole(data.role || "user");
-      } else {
-        // Create profile if it doesn't exist
-        await createUserProfile(userId);
-      }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      setUserRole("user");
-    }
-  }, []);
-
-  // Create user profile in database
-  const createUserProfile = useCallback(async (userId: string) => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-
-      if (!user) return;
-
-      const newProfile: Partial<UserProfile> = {
-        id: userId,
-        email: user.email!,
-        role: "user",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .insert([newProfile])
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating user profile:", error);
-        setUserRole("user");
-        return;
-      }
-
-      setProfile(data);
-      setUserRole(data.role);
-    } catch (error) {
-      console.error("Error creating user profile:", error);
-      setUserRole("user");
-    }
-  }, []);
 
   // Handle authentication state changes
-  const handleAuthChange = useCallback(
-    async (session: Session | null) => {
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-
-      if (currentUser) {
-        await fetchUserProfile(currentUser.id);
-      } else {
-        setUserRole(undefined);
-        setProfile(undefined);
-      }
-    },
-    [fetchUserProfile]
-  );
+  const handleAuthChange = useCallback(async (session: Session | null) => {
+    setSession(session);
+    const currentUser = session?.user ?? null;
+    setUser(currentUser);
+  }, []);
 
   // Initialize auth state
   useEffect(() => {
@@ -219,7 +131,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const signOut = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      
+
       // Clear cookies and local storage first
       document.cookie.split(";").forEach((c) => {
         const eqPos = c.indexOf("=");
@@ -227,7 +139,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
         document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
       });
-      
+
       // Clear localStorage
       localStorage.clear();
       sessionStorage.clear();
@@ -242,9 +154,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       // Clear local state
       setUser(null);
       setSession(null);
-      setUserRole(undefined);
-      setProfile(undefined);
-      
+
       // Force reload to ensure clean state
       window.location.href = "/login";
     } catch (error) {
@@ -252,8 +162,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       // Clear local state even on error
       setUser(null);
       setSession(null);
-      setUserRole(undefined);
-      setProfile(undefined);
       window.location.href = "/login";
     } finally {
       setIsLoading(false);
@@ -274,34 +182,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  // Update user profile
-  const updateProfile = async (
-    updates: Partial<UserProfile>
-  ): Promise<void> => {
-    if (!user || !profile) {
-      throw new Error("User not authenticated");
-    }
-
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-
-      if (error) {
-        throw new Error(`Failed to update profile: ${error.message}`);
-      }
-
-      // Update local state
-      setProfile((prev) => (prev ? { ...prev, ...updates } : undefined));
-    } catch (error) {
-      throw error;
-    }
-  };
-
   // Refresh session
   const refreshSession = async (): Promise<void> => {
     const { error } = await supabase.auth.refreshSession();
@@ -310,24 +190,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  // Delete account
+  // Delete account - simplified without profile table
   const deleteAccount = async (): Promise<void> => {
     if (!user) {
       throw new Error("User not authenticated");
     }
 
     try {
-      // Delete profile first
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", user.id);
-
-      if (profileError) {
-        console.error("Error deleting profile:", profileError);
-      }
-
-      // Then delete auth user (requires RLS policy or admin privileges)
+      // Delete auth user (requires RLS policy or admin privileges)
       const { error: authError } = await supabase.auth.admin.deleteUser(
         user.id
       );
@@ -339,8 +209,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       // Clear local state
       setUser(null);
       setSession(null);
-      setUserRole(undefined);
-      setProfile(undefined);
     } catch (error) {
       throw error;
     }
@@ -351,13 +219,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     session,
     isLoading,
     isAuthenticated: !!user,
-    userRole,
-    profile,
     signIn,
     signUp,
     signOut,
     resetPassword,
-    updateProfile,
     refreshSession,
     deleteAccount,
   };
@@ -407,12 +272,18 @@ export const useRequireAuth = (redirectTo = "/login") => {
   return { isAuthenticated, isLoading };
 };
 
-export const useRequireRole = (requiredRole: "admin" | "user") => {
-  const { userRole, isLoading } = useAuth();
+// Simplified role hook - can be extended later if needed
+export const useUserInfo = () => {
+  const { user, isLoading } = useAuth();
 
-  const hasRequiredRole =
-    userRole === requiredRole ||
-    (requiredRole === "user" && userRole === "admin");
+  // You can extract role from user metadata if stored there
+  const userRole = user?.user_metadata?.role || "user";
 
-  return { hasRequiredRole, isLoading, userRole };
+  return { 
+    user, 
+    userRole: userRole as "admin" | "user", 
+    isLoading,
+    email: user?.email,
+    id: user?.id
+  };
 };
