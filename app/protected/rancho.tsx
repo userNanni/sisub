@@ -25,6 +25,7 @@ import {
 import { NEAR_DATE_THRESHOLD } from "@/components/constants/rancho";
 import { DayCardSkeleton } from "@/components/DayCard";
 import SimplifiedMilitaryStatsSkeleton from "~/components/SimplifiedMilitaryStatsSkeleton";
+import type { Route } from "./+types/rancho";
 
 const SimplifiedMilitaryStats = lazy(
   () => import("@/components/SimplifiedMilitaryStats")
@@ -58,6 +59,13 @@ const getDayCardData = (
     isToday,
   };
 };
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Previsão SISUB" },
+    { name: "description", content: "Faça sua previsão" },
+  ];
+}
 
 export default function Rancho(): JSX.Element {
   const {

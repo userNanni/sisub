@@ -182,11 +182,13 @@ export const useRanchoData = (): RanchoDataHook => {
         setIsLoading(false);
       }
     }
-  }, [user?.id, dates, defaultUnit, setErrorWithClear]); // ✅ Dependências estáveis
+  }, [user?.id, dates, defaultUnit, setErrorWithClear]);
 
+  // Função savePendingChanges melhorada e mais robusta
   const savePendingChanges = useCallback(async (): Promise<void> => {
     if (!user?.id || pendingChanges.length === 0) return;
 
+    // Evitar múltiplas operações simultâneas
     if (saveOperationRef.current) {
       await saveOperationRef.current;
       return;
@@ -199,77 +201,157 @@ export const useRanchoData = (): RanchoDataHook => {
       try {
         const changesToSave = [...pendingChanges];
 
-        const changesByDate = changesToSave.reduce((acc, change) => {
-          if (!acc[change.date]) {
-            acc[change.date] = [];
-          }
-          acc[change.date].push(change);
+        // Agrupar mudanças por data e refeição para evitar operações duplicadas
+        const changesByDateAndMeal = changesToSave.reduce((acc, change) => {
+          const key = `${change.date}-${change.meal}`;
+          acc[key] = change;
           return acc;
-        }, {} as { [date: string]: PendingChange[] });
+        }, {} as { [key: string]: PendingChange });
 
+        // Processar cada mudança individualmente com operações específicas
         const results = await Promise.allSettled(
-          Object.entries(changesByDate).map(async ([date, dateChanges]) => {
-            const { error: deleteError } = await supabase
-              .from("rancho_previsoes")
-              .delete()
-              .eq("user_id", user.id)
-              .eq("data", date);
+          Object.values(changesByDateAndMeal).map(async (change) => {
+            try {
+              if (change.value) {
+                // Se vai_comer = true, fazer upsert (insert ou update)
+                const { error: upsertError } = await supabase
+                  .from("rancho_previsoes")
+                  .upsert({
+                    data: change.date,
+                    unidade: change.unidade,
+                    user_id: user.id,
+                    refeicao: change.meal,
+                    vai_comer: true,
+                  }, {
+                    onConflict: 'user_id,data,refeicao',
+                    ignoreDuplicates: false
+                  });
 
-            if (deleteError) throw deleteError;
+                if (upsertError) {
+                  // Fallback: Se upsert falhar, tentar delete + insert
+                  console.warn(`Upsert falhou para ${change.date}-${change.meal}, tentando delete+insert:`, upsertError);
+                  
+                  await supabase
+                    .from("rancho_previsoes")
+                    .delete()
+                    .eq("user_id", user.id)
+                    .eq("data", change.date)
+                    .eq("refeicao", change.meal);
 
-            const recordsToInsert = dateChanges
-              .filter((change) => change.value)
-              .map((change) => ({
-                data: change.date,
-                unidade: change.unidade,
-                user_id: user.id,
-                refeicao: change.meal,
-                vai_comer: true,
-              }));
+                  const { error: insertError } = await supabase
+                    .from("rancho_previsoes")
+                    .insert({
+                      data: change.date,
+                      unidade: change.unidade,
+                      user_id: user.id,
+                      refeicao: change.meal,
+                      vai_comer: true,
+                    });
 
-            if (recordsToInsert.length > 0) {
-              const { error: insertError } = await supabase
-                .from("rancho_previsoes")
-                .insert(recordsToInsert);
+                  if (insertError) throw insertError;
+                }
+              } else {
+                // Se vai_comer = false, deletar apenas o registro específico
+                const { error: deleteError } = await supabase
+                  .from("rancho_previsoes")
+                  .delete()
+                  .eq("user_id", user.id)
+                  .eq("data", change.date)
+                  .eq("refeicao", change.meal);
 
-              if (insertError) throw insertError;
+                if (deleteError) {
+                  // Se o erro for "registro não encontrado", não é um erro crítico
+                  if (!deleteError.message.includes('No rows deleted')) {
+                    throw deleteError;
+                  }
+                }
+              }
+
+              return { 
+                success: true, 
+                change,
+                operation: change.value ? 'upsert' : 'delete'
+              };
+            } catch (error) {
+              console.error(`Erro ao processar mudança para ${change.date}-${change.meal}:`, error);
+              return { 
+                success: false, 
+                change, 
+                error: error instanceof Error ? error.message : 'Erro desconhecido'
+              };
             }
-
-            return { date, changes: dateChanges.length };
           })
         );
 
-        const successful = results.filter((result) => result.status === "fulfilled");
-        const failed = results.filter((result) => result.status === "rejected");
+        // Processar resultados e dar feedback detalhado
+        const successful = results.filter((result) => 
+          result.status === "fulfilled" && result.value.success
+        );
+        const failed = results.filter((result) => 
+          result.status === "rejected" || 
+          (result.status === "fulfilled" && !result.value.success)
+        );
 
         if (failed.length === 0) {
+          // Todas as operações foram bem-sucedidas
           setSuccess(`${changesToSave.length} alteração(ões) salva(s) com sucesso!`);
+          
+          // Remover apenas as mudanças que foram processadas com sucesso
           setPendingChanges((prev) => 
             prev.filter(change => !changesToSave.some(saved => 
               saved.date === change.date && 
               saved.meal === change.meal && 
-              saved.value === change.value
+              saved.value === change.value &&
+              saved.unidade === change.unidade
             ))
           );
         } else if (successful.length > 0) {
-          const successCount = successful.reduce(
-            (acc, result) => acc + (result as PromiseFulfilledResult<any>).value.changes,
-            0
+          // Algumas operações falharam, mas outras foram bem-sucedidas
+          setSuccess(`${successful.length} alteração(ões) salva(s). ${failed.length} falharam.`);
+          
+          // Remover apenas as mudanças que foram salvas com sucesso
+          const successfulChanges = successful.map(result => 
+            (result as PromiseFulfilledResult<any>).value.change
           );
-          setSuccess(`${successCount} alteração(ões) salva(s). ${failed.length} data(s) falharam.`);
-
-          const successfulDates = successful.map(
-            (result) => (result as PromiseFulfilledResult<any>).value.date
-          );
+          
           setPendingChanges((prev) =>
-            prev.filter((change) => !successfulDates.includes(change.date))
+            prev.filter((change) => 
+              !successfulChanges.some(successful => 
+                successful.date === change.date && 
+                successful.meal === change.meal &&
+                successful.value === change.value &&
+                successful.unidade === change.unidade
+              )
+            )
           );
+
+          // Log detalhado dos erros para debug
+          failed.forEach(result => {
+            if (result.status === "fulfilled") {
+              console.error("Erro na operação:", result.value.error);
+            } else {
+              console.error("Promise rejeitada:", result.reason);
+            }
+          });
         } else {
-          throw new Error("Todas as operações falharam");
+          // Todas as operações falharam
+          const errorMessages = failed.map(result => {
+            if (result.status === "fulfilled") {
+              return result.value.error;
+            } else {
+              return result.reason?.message || 'Erro desconhecido';
+            }
+          }).join(', ');
+          
+          throw new Error(`Todas as ${changesToSave.length} operações falharam: ${errorMessages}`);
         }
       } catch (err) {
-        console.error("Erro ao salvar mudanças:", err);
-        setErrorWithClear("Erro ao salvar alterações. Tente novamente.");
+        console.error("Erro crítico ao salvar mudanças:", err);
+        setErrorWithClear(
+          err instanceof Error 
+            ? `Erro ao salvar alterações: ${err.message}` 
+            : "Erro ao salvar alterações. Tente novamente."
+        );
       } finally {
         setIsSavingBatch(false);
         saveOperationRef.current = null;
@@ -280,7 +362,7 @@ export const useRanchoData = (): RanchoDataHook => {
     return saveOperationRef.current;
   }, [user?.id, pendingChanges, setSuccess, setErrorWithClear]);
 
-  // ✅ Auto-save effect com dependência estável
+  // Auto-save effect com dependência estável
   useEffect(() => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
@@ -297,21 +379,21 @@ export const useRanchoData = (): RanchoDataHook => {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [pendingChanges, savePendingChanges]); // ✅ Incluir savePendingChanges
+  }, [pendingChanges, savePendingChanges]);
 
-  // ✅ Client-side hydration
+  // Client-side hydration
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // ✅ CORREÇÃO PRINCIPAL: Array simples e dependências estáveis
+  // Carregar previsões quando o cliente estiver pronto
   useEffect(() => {
     if (isClient && user?.id) {
       loadExistingPrevisoes();
     }
-  }, [isClient, user?.id, loadExistingPrevisoes]); // ✅ Corrigido: [isClient] em vez de [[isClient]]
+  }, [isClient, user?.id, loadExistingPrevisoes]);
 
-  // ✅ Cleanup effect
+  // Cleanup effect
   useEffect(() => {
     return () => {
       if (autoSaveTimerRef.current) {
