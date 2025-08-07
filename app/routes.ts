@@ -12,4 +12,7 @@ export default [
       route("rancho", "./protected/rancho.tsx")
     ]),
 
+    // Nova rota API para Power BI
+  route("api/rancho", "./routes/apiRancho.tsx"),
+
 ] satisfies RouteConfig;
