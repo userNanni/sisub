@@ -1,5 +1,5 @@
 import type { Route } from "./+types/apiRancho";
-import supabase from "@/utils/supabase";
+import supabase from "../utils/supabase";
 
 export async function loader({ request }: Route.LoaderArgs) {
   try {

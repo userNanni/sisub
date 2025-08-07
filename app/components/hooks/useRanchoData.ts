@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useAuth } from "@/auth/auth";
-import supabase from "@/utils/supabase";
+import { useAuth } from "../../auth/auth";
+import supabase from "../../utils/supabase";
 
 const DEFAULT_UNIT = "DIRAD - DIRAD";
 const DAYS_TO_SHOW = 30;
