@@ -8,7 +8,15 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
-import { LogOut, User, Home, QrCode, X, Calendar } from "lucide-react";
+import {
+  LogOut,
+  User,
+  Home,
+  QrCode,
+  X,
+  Calendar,
+  ScanQrCode,
+} from "lucide-react";
 import { useState, useEffect, useMemo, type JSX } from "react";
 import type { AuthContextType } from "~/auth/auth";
 import { QRCodeCanvas } from "qrcode.react";
@@ -75,7 +83,7 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
     () => (isOnRancho ? "Fiscal" : "Previsão"),
     [isOnRancho]
   );
-  const ToggleIcon = isOnRancho ? QrCode : Calendar;
+  const ToggleIcon = isOnRancho ? ScanQrCode : Calendar;
 
   const handleToggle = () => navigate(toggleTarget);
 
