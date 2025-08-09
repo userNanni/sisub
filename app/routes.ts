@@ -9,7 +9,8 @@ export default [
     ]),
 
     layout("./protected/layout.tsx", [
-      route("rancho", "./protected/rancho.tsx")
+      route("rancho", "./protected/home/rancho.tsx"),
+      route("fiscal", "./protected/fiscal/fiscal.tsx"),
     ]),
 
     // Nova rota API para Power BI

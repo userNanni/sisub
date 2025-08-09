@@ -8,11 +8,12 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
-import { LogOut, User, Home, QrCode, X } from "lucide-react";
-import { useState, useEffect } from "react";
-import type { JSX } from "react";
+import { LogOut, User, Home, QrCode, X, Calendar } from "lucide-react";
+import { useState, useEffect, useMemo, type JSX } from "react";
 import type { AuthContextType } from "~/auth/auth";
 import { QRCodeCanvas } from "qrcode.react";
+import { useLocation, useNavigate } from "react-router-dom";
+import supabase from "@/utils/supabase"; // novo import
 
 interface RanchoHeaderProps {
   user: AuthContextType["user"];
@@ -21,25 +22,77 @@ interface RanchoHeaderProps {
 
 export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
   const [isClient, setIsClient] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // novo estado
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Função para calcular o tamanho do QR Code baseado na tela
+  // Verifica se o usuário é admin (existe em profiles_admin)
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkAdmin = async () => {
+      if (!user?.id) {
+        if (!cancelled) setIsAdmin(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles_admin")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Erro ao verificar admin:", error);
+        setIsAdmin(false);
+        return;
+      }
+
+      setIsAdmin(!!data);
+    };
+
+    checkAdmin();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  // Detecta a rota atual
+  const isOnRancho = location.pathname.startsWith("/rancho");
+
+  // Botão toggle Previsão <-> Fiscal
+  const toggleTarget = useMemo(
+    () => (isOnRancho ? "/fiscal" : "/rancho"),
+    [isOnRancho]
+  );
+  const toggleLabel = useMemo(
+    () => (isOnRancho ? "Fiscal" : "Previsão"),
+    [isOnRancho]
+  );
+  const ToggleIcon = isOnRancho ? QrCode : Calendar;
+
+  const handleToggle = () => navigate(toggleTarget);
+
+  // Tamanho do QR Code baseado na tela
   const getQRSize = () => {
     if (!isClient) return 180;
     const width = window.innerWidth;
-    if (width < 400) return 140; // Muito pequeno
-    if (width < 640) return 160; // Mobile
-    return 180; // Desktop
+    if (width < 400) return 140;
+    if (width < 640) return 160;
+    return 180;
   };
 
   return (
     <header className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo Section */}
+          {/* Logo */}
           <div className="flex items-center space-x-3">
             {isClient && window.innerWidth >= 640 && (
               <div className="p-2 bg-blue-50 rounded-lg">
@@ -51,9 +104,24 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
             </h1>
           </div>
 
-          {/* User Actions */}
+          {/* Ações do usuário */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            {/* User Info */}
+            {/* Toggle entre Previsão e Fiscal (somente admins) */}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggle}
+                className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 shadow-sm cursor-pointer"
+              >
+                <ToggleIcon className="h-4 w-4" />
+                {isClient && window.innerWidth >= 640 && (
+                  <span className="font-medium">{toggleLabel}</span>
+                )}
+              </Button>
+            )}
+
+            {/* Info do usuário */}
             <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-700 bg-gray-50 px-3 py-2 rounded-full border">
               <div className="p-1 bg-white rounded-full">
                 <User className="h-3 w-3 text-gray-600" />
@@ -63,23 +131,22 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
               </span>
             </div>
 
-            {/* QR Code Dialog */}
+            {/* Dialog do QR do usuário */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 shadow-sm"
+                  className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 shadow-sm cursor-pointer"
                 >
                   <QrCode className="h-4 w-4" />
                   {isClient && window.innerWidth >= 640 && (
-                    <span className="font-medium">QR Code</span>
+                    <span className="font-medium">QR</span>
                   )}
                 </Button>
               </AlertDialogTrigger>
 
               <AlertDialogContent className="w-[95vw] max-w-md mx-auto p-0 overflow-hidden">
-                {/* Header com gradiente - responsivo */}
                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 text-white relative">
                   <AlertDialogCancel className="absolute top-2 sm:top-4 right-2 sm:right-4 h-7 w-7 sm:h-8 sm:w-8 p-0 bg-white/20 hover:bg-white/30 border-0 text-white rounded-full transition-colors">
                     <X className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -98,12 +165,9 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
                   </AlertDialogHeader>
                 </div>
 
-                {/* QR Code Section - Totalmente responsivo */}
                 <div className="px-3 sm:px-6 py-4 sm:py-8 bg-gray-50">
                   <div className="flex flex-col items-center space-y-3 sm:space-y-4">
-                    {/* QR Code com design melhorado e responsivo */}
                     <div className="bg-white p-3 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border-2 sm:border-4 border-gray-100 relative w-fit">
-                      {/* Pontos decorativos responsivos */}
                       <div className="absolute -top-1 sm:-top-2 -left-1 sm:-left-2 w-2 h-2 sm:w-4 sm:h-4 bg-blue-600 rounded-full"></div>
                       <div className="absolute -top-1 sm:-top-2 -right-1 sm:-right-2 w-2 h-2 sm:w-4 sm:h-4 bg-blue-600 rounded-full"></div>
                       <div className="absolute -bottom-1 sm:-bottom-2 -left-1 sm:-left-2 w-2 h-2 sm:w-4 sm:h-4 bg-blue-600 rounded-full"></div>
@@ -119,7 +183,6 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
                       />
                     </div>
 
-                    {/* User ID Display - responsivo */}
                     <div className="text-center space-y-2 w-full max-w-xs sm:max-w-sm">
                       <p className="text-xs sm:text-sm font-medium text-gray-600">
                         ID do Usuário
@@ -131,7 +194,6 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
                       </div>
                     </div>
 
-                    {/* Decorative elements - responsivos */}
                     <div className="flex space-x-1.5 sm:space-x-2 mt-2 sm:mt-4">
                       <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-300 rounded-full animate-pulse"></div>
                       <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full animate-pulse delay-75"></div>
@@ -142,12 +204,12 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
               </AlertDialogContent>
             </AlertDialog>
 
-            {/* Logout Button */}
+            {/* Sair */}
             <Button
               variant="outline"
               size="sm"
               onClick={signOut}
-              className="flex items-center space-x-2 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-all duration-200 shadow-sm"
+              className="flex items-center space-x-2 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-all duration-200 shadow-sm cursor-pointer"
             >
               <LogOut className="h-4 w-4" />
               {isClient && window.innerWidth >= 640 && (
