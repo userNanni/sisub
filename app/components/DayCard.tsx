@@ -247,8 +247,8 @@ export const DayCard = memo<DayCardProps>(
                           key={meal.value}
                           className={cn(
                             "w-2 h-2 rounded-full transition-all duration-200",
-                            isSelected 
-                              ? "bg-green-500 scale-110" 
+                            isSelected
+                              ? "bg-green-500 scale-110"
                               : "bg-muted-foreground/30"
                           )}
                           title={`${meal.label}: ${

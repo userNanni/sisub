@@ -1,22 +1,17 @@
-// Qr.tsx - Fluxo Fiscal
-// 1) Escolher dia e refeição
-// 2) Escanear QRCode do militar (uuid)
-// 3) Validar previsão no Supabase e registrar presença
-// 4) Listar presenças com exclusão
-
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import QrScanner from "qr-scanner";
-import supabase from "@/utils/supabase"; // ajuste este import conforme seu projeto
+import supabase from "@/utils/supabase";
 
 // UI & Icons
 import { Button } from "@/components/ui/button";
 import {
   Camera,
-  Loader2,
   RefreshCw,
   Calendar,
   Utensils,
   Trash2,
+  Check,
+  AlertCircle,
 } from "lucide-react";
 import {
   Select,
@@ -25,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "~/components/ui/label";
 import {
   Table,
   TableBody,
@@ -36,29 +32,44 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
+// shadcn alert dialog
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+// Unit selector
+import { UnitSelector } from "@/components/UnitSelector";
+
 type MealKey = "cafe" | "almoco" | "janta" | "ceia";
 
-interface ScanState {
+interface ScannerState {
   isReady: boolean;
   isScanning: boolean;
   hasPermission: boolean;
   error?: string;
 }
 
-interface PresenceRow {
+interface PresenceRecord {
   id: string; // uuid do registro de presença
-  user_id: string; // uuid do militar
+  user_id: string; // uuid do militar (nome da coluna do banco mantido)
   date: string; // yyyy-mm-dd
   meal: MealKey;
   created_at: string;
 }
 
-const generateDates = (days: number): string[] => {
-  const dates: string[] = [];
+const generateRestrictedDates = (): string[] => {
   const today = new Date();
-  for (let i = 0; i < days; i++) {
+  const dates: string[] = [];
+  for (const offset of [-1, 0, 1]) {
     const d = new Date(today);
-    d.setDate(today.getDate() + i);
+    d.setDate(today.getDate() + offset);
     dates.push(d.toISOString().split("T")[0]);
   }
   return dates;
@@ -81,32 +92,53 @@ export function meta() {
   ];
 }
 
-export default function Qr(): JSX.Element {
-  const scanner = useRef<QrScanner | null>(null);
-  const videoEl = useRef<HTMLVideoElement>(null);
-  const qrBoxEl = useRef<HTMLDivElement>(null);
+type DialogState = {
+  open: boolean;
+  uuid: string | null;
+  systemForecast: boolean | null; // veio do banco (rancho_previsoes.vai_comer)
+  forecastChoice: "sim" | "nao";
+  willEnter: "sim" | "nao";
+};
 
-  const [scanState, setScanState] = useState<ScanState>({
+export default function Qr(): JSX.Element {
+  const scannerRef = useRef<QrScanner | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const qrBoxRef = useRef<HTMLDivElement>(null);
+
+  const [scannerState, setScannerState] = useState<ScannerState>({
     isReady: false,
     isScanning: false,
     hasPermission: true,
   });
-  const [scannedResult, setScannedResult] = useState<string>("");
+  const [lastScanResult, setLastScanResult] = useState<string>("");
 
   const [selectedDate, setSelectedDate] = useState<string>(
     () => new Date().toISOString().split("T")[0]
   );
   const [selectedMeal, setSelectedMeal] = useState<MealKey>("almoco");
-  const [presence, setPresence] = useState<PresenceRow[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<string>("");
 
-  const dates = useMemo(() => generateDates(30), []);
+  const [presences, setPresences] = useState<PresenceRecord[]>([]);
+
+  // Mapa user_id -> se está previsto (falou que ia) via rancho_previsoes.vai_comer
+  const [forecastMap, setForecastMap] = useState<Record<string, boolean>>({});
+
+  const [dialog, setDialog] = useState<DialogState>({
+    open: false,
+    uuid: null,
+    systemForecast: null,
+    forecastChoice: "nao",
+    willEnter: "sim",
+  });
+
+  const dates = useMemo(() => generateRestrictedDates(), []);
 
   // Iniciar scanner
   useEffect(() => {
     let isCancelled = false;
 
     const startScanner = async () => {
-      if (!videoEl.current || scanner.current) return;
+      if (!videoRef.current || scannerRef.current) return;
 
       try {
         const hasPermission = await navigator.mediaDevices
@@ -119,7 +151,7 @@ export default function Qr(): JSX.Element {
 
         if (!hasPermission) {
           if (!isCancelled) {
-            setScanState((s) => ({
+            setScannerState((s) => ({
               ...s,
               hasPermission: false,
               isReady: true,
@@ -128,8 +160,8 @@ export default function Qr(): JSX.Element {
           return;
         }
 
-        scanner.current = new QrScanner(
-          videoEl.current,
+        scannerRef.current = new QrScanner(
+          videoRef.current,
           (result) => {
             onScanSuccess(result);
           },
@@ -138,13 +170,13 @@ export default function Qr(): JSX.Element {
             preferredCamera: "environment",
             highlightScanRegion: true,
             highlightCodeOutline: true,
-            overlay: qrBoxEl.current ?? undefined,
+            overlay: qrBoxRef.current ?? undefined,
           }
         );
 
-        await scanner.current.start();
+        await scannerRef.current.start();
         if (!isCancelled) {
-          setScanState({
+          setScannerState({
             isReady: true,
             isScanning: true,
             hasPermission: true,
@@ -153,7 +185,7 @@ export default function Qr(): JSX.Element {
       } catch (err: any) {
         console.error("Erro ao iniciar o scanner:", err);
         if (!isCancelled) {
-          setScanState({
+          setScannerState({
             isReady: true,
             isScanning: false,
             hasPermission: false,
@@ -167,14 +199,14 @@ export default function Qr(): JSX.Element {
 
     return () => {
       isCancelled = true;
-      scanner.current?.stop();
+      scannerRef.current?.stop();
       // @ts-ignore
-      scanner.current?.destroy?.();
-      scanner.current = null;
+      scannerRef.current?.destroy?.();
+      scannerRef.current = null;
     };
   }, []);
 
-  // Carregar presenças já registradas para o filtro atual
+  // Carregar presenças e previsões (falou que ia) para o filtro atual
   useEffect(() => {
     const loadPresence = async () => {
       const { data, error } = await supabase
@@ -191,7 +223,31 @@ export default function Qr(): JSX.Element {
         });
         return;
       }
-      setPresence(data || []);
+      const rows = data || [];
+      setPresences(rows);
+
+      if (rows.length > 0) {
+        const userIds = Array.from(new Set(rows.map((p) => p.user_id)));
+        const { data: previsoes, error: prevErr } = await supabase
+          .from("rancho_previsoes")
+          .select("user_id, vai_comer")
+          .eq("data", selectedDate)
+          .eq("refeicao", selectedMeal)
+          .in("user_id", userIds);
+
+        if (prevErr) {
+          console.warn("Falha ao buscar previsões:", prevErr);
+          setForecastMap({});
+        } else {
+          const map: Record<string, boolean> = {};
+          for (const r of previsoes ?? []) {
+            map[r.user_id] = !!r.vai_comer;
+          }
+          setForecastMap(map);
+        }
+      } else {
+        setForecastMap({});
+      }
     };
 
     loadPresence();
@@ -201,10 +257,10 @@ export default function Qr(): JSX.Element {
     const uuid = (result?.data || "").trim();
     if (!uuid) return;
 
-    setScannedResult(uuid);
+    setLastScanResult(uuid);
 
     try {
-      // 1) Valida previsão: precisa estar TRUE para aquele dia/refeição
+      // Obter previsão do sistema (vai_comer) para exibir no diálogo
       const { data: previsao, error: prevError } = await supabase
         .from("rancho_previsoes")
         .select("vai_comer")
@@ -215,14 +271,40 @@ export default function Qr(): JSX.Element {
 
       if (prevError) throw prevError;
 
-      if (!previsao || !previsao.vai_comer) {
-        toast.error("Não autorizado", {
-          description: "Militar não previsto para esta refeição/dia.",
+      setDialog({
+        open: true,
+        uuid,
+        systemForecast: previsao ? !!previsao.vai_comer : null,
+        forecastChoice: previsao && previsao.vai_comer ? "sim" : "nao",
+        willEnter: "sim",
+      });
+    } catch (err) {
+      console.error("Erro ao preparar diálogo:", err);
+      toast.error("Erro", { description: "Falha ao processar QR." });
+    }
+  };
+
+  const onScanFail = (err: string | Error) => {
+    console.warn("QR Error:", err);
+  };
+
+  const confirmDialog = async () => {
+    const uuid = dialog.uuid;
+    if (!uuid) return;
+
+    const willEnter = dialog.willEnter === "sim";
+
+    try {
+      if (!willEnter) {
+        toast.info("Registro atualizado", {
+          description:
+            "Decisão registrada. Militar não entrará para a refeição.",
         });
+        setDialog((d) => ({ ...d, open: false }));
         return;
       }
 
-      // 2) Insere presença (única por date+meal+user_id)
+      // Inserir presença (única por date+meal+user_id)
       const { data: inserted, error: insError } = await supabase
         .from("rancho_presencas")
         .insert({ user_id: uuid, date: selectedDate, meal: selectedMeal })
@@ -236,37 +318,35 @@ export default function Qr(): JSX.Element {
         } else {
           throw insError;
         }
-        return;
-      }
+      } else {
+        const newRow = inserted?.[0] as PresenceRecord | undefined;
+        if (newRow) {
+          setPresences((prev) => [newRow, ...prev]);
 
-      const newRow = inserted?.[0] as PresenceRow | undefined;
-      if (newRow) {
-        setPresence((prev) => [newRow, ...prev]);
-        toast.success("Presença registrada", {
-          description: `UUID ${uuid} marcado.`,
-        });
+          toast.success("Presença registrada", {
+            description: `UUID ${uuid} marcado.`,
+          });
+        }
       }
     } catch (err) {
-      console.error("Erro no processamento do QR:", err);
-      toast.error("Erro", { description: "Falha ao processar QR." });
+      console.error("Erro ao confirmar diálogo:", err);
+      toast.error("Erro", { description: "Falha ao salvar decisão." });
+    } finally {
+      setDialog((d) => ({ ...d, open: false }));
     }
-  };
-
-  const onScanFail = (err: string | Error) => {
-    console.warn("QR Error:", err);
   };
 
   const actions = useMemo(
     () => ({
       toggleScan: async () => {
-        if (!scanner.current) return;
+        if (!scannerRef.current) return;
         try {
-          if (scanState.isScanning) {
-            await scanner.current.stop();
-            setScanState((s) => ({ ...s, isScanning: false }));
+          if (scannerState.isScanning) {
+            await scannerRef.current.stop();
+            setScannerState((s) => ({ ...s, isScanning: false }));
           } else {
-            await scanner.current.start();
-            setScanState((s) => ({ ...s, isScanning: true }));
+            await scannerRef.current.start();
+            setScannerState((s) => ({ ...s, isScanning: true }));
           }
         } catch (err) {
           console.error("Erro ao alternar scanner:", err);
@@ -274,98 +354,278 @@ export default function Qr(): JSX.Element {
       },
       refresh: async () => {
         try {
-          await scanner.current?.stop();
+          await scannerRef.current?.stop();
         } catch {}
         try {
-          await scanner.current?.start();
-          setScanState((s) => ({ ...s, isScanning: true, isReady: true }));
+          await scannerRef.current?.start();
+          setScannerState((s) => ({ ...s, isScanning: true, isReady: true }));
         } catch (err) {
           console.error("Erro ao atualizar scanner:", err);
         }
       },
-      clearResult: () => setScannedResult(""),
-      removePresence: async (id: string) => {
+      clearResult: () => setLastScanResult(""),
+      removePresence: async (row: PresenceRecord) => {
+        // where mais específico: id + data + refeição + user_id
         const { error } = await supabase
           .from("rancho_presencas")
           .delete()
-          .eq("id", id);
+          .match({
+            id: row.id,
+            date: row.date,
+            meal: row.meal,
+            user_id: row.user_id,
+          });
+
         if (error) {
           toast.error("Erro", { description: "Não foi possível excluir." });
           return;
         }
-        setPresence((prev) => prev.filter((p) => p.id !== id));
+        setPresences((prev) => prev.filter((p) => p.id !== row.id));
+        toast.success("Excluído", { description: "Registro removido." });
       },
     }),
-    [scanState.isScanning]
+    [scannerState.isScanning]
   );
 
   return (
     <div className="space-y-6">
       {/* Filtros de fiscalização */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+        {/* Dia */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Dia
-          </label>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <Select
-              value={selectedDate}
-              onValueChange={(v) => setSelectedDate(v)}
-            >
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Selecione o dia" />
-              </SelectTrigger>
-              <SelectContent>
-                {dates.map((d) => (
-                  <SelectItem value={d} key={d}>
-                    {new Date(d).toLocaleDateString("pt-BR", {
-                      weekday: "short",
-                      day: "2-digit",
-                      month: "2-digit",
+          {(() => {
+            const isValidDate = !selectedDate || dates.includes(selectedDate);
+            const size: "sm" | "md" | "lg" = "md";
+            const disabled = false;
+            const base = "w-full transition-all duration-200";
+            const sizeMap = { sm: "text-sm", md: "", lg: "text-lg" };
+            let trigger = `${base} ${sizeMap[size]}`;
+
+            if (disabled) {
+              trigger += " cursor-not-allowed opacity-60";
+            } else {
+              trigger += " cursor-pointer hover:border-gray-400";
+            }
+            // Azul como padrão, vermelho em erro (igual UnitSelector)
+            trigger += " focus:border-blue-400 focus:ring-blue-200";
+            if (selectedDate && !isValidDate) {
+              trigger += " border-red-300 bg-red-50";
+            }
+
+            const labelCls = `text-sm font-medium flex items-center justify-between ${
+              disabled ? "text-gray-500" : "text-gray-700"
+            }`;
+
+            return (
+              <div className="space-y-2">
+                <Label className={labelCls}>
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>Dia:</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {selectedDate && !isValidDate && (
+                      <>
+                        <Badge
+                          variant="outline"
+                          className="text-xs text-red-600 border-red-300 bg-red-50"
+                        >
+                          Inválido
+                        </Badge>
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                      </>
+                    )}
+                  </div>
+                </Label>
+
+                <Select
+                  value={selectedDate}
+                  onValueChange={(v) => setSelectedDate(v)}
+                  disabled={disabled}
+                >
+                  <SelectTrigger className={trigger}>
+                    <SelectValue placeholder="Selecione o dia">
+                      {selectedDate && (
+                        <div className="flex items-center space-x-2">
+                          <span>
+                            {new Date(selectedDate).toLocaleDateString(
+                              "pt-BR",
+                              {
+                                weekday: "short",
+                                day: "2-digit",
+                                month: "2-digit",
+                              }
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+
+                  <SelectContent className="max-h-60">
+                    <div className="p-2 text-xs text-gray-500 border-b">
+                      Selecione o dia do cardápio
+                    </div>
+                    {dates.map((d) => {
+                      const selected = d === selectedDate;
+                      return (
+                        <SelectItem
+                          className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50 transition-colors"
+                          value={d}
+                          key={d}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>
+                              {new Date(d).toLocaleDateString("pt-BR", {
+                                weekday: "short",
+                                day: "2-digit",
+                                month: "2-digit",
+                              })}
+                            </span>
+                            {selected && (
+                              <Check className="h-4 w-4 text-green-600 ml-2" />
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
                     })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  </SelectContent>
+                </Select>
+
+                {selectedDate && !isValidDate && (
+                  <div className="text-xs text-red-600 flex items-center space-x-1">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>Data inválida selecionada</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
+        {/* Refeição */}
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Refeição
-          </label>
+          {(() => {
+            const mealKeys = Object.keys(MEAL_LABEL) as MealKey[];
+            const isValidMeal =
+              !selectedMeal || mealKeys.includes(selectedMeal);
+            const size: "sm" | "md" | "lg" = "md";
+            const disabled = false;
+            const base = "w-full transition-all duration-200";
+            const sizeMap = { sm: "text-sm", md: "", lg: "text-lg" };
+            let trigger = `${base} ${sizeMap[size]}`;
+
+            if (disabled) {
+              trigger += " cursor-not-allowed opacity-60";
+            } else {
+              trigger += " cursor-pointer hover:border-gray-400";
+            }
+            trigger += " focus:border-blue-400 focus:ring-blue-200";
+            if (selectedMeal && !isValidMeal) {
+              trigger += " border-red-300 bg-red-50";
+            }
+
+            const labelCls = `text-sm font-medium flex items-center justify-between ${
+              disabled ? "text-gray-500" : "text-gray-700"
+            }`;
+
+            return (
+              <div className="space-y-2">
+                <Label className={labelCls}>
+                  <div className="flex items-center space-x-1">
+                    <Utensils className="h-4 w-4" />
+                    <span>Refeição:</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {selectedMeal && !isValidMeal && (
+                      <>
+                        <Badge
+                          variant="outline"
+                          className="text-xs text-red-600 border-red-300 bg-red-50"
+                        >
+                          Inválida
+                        </Badge>
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                      </>
+                    )}
+                  </div>
+                </Label>
+
+                <Select
+                  value={selectedMeal}
+                  onValueChange={(v) => setSelectedMeal(v as MealKey)}
+                  disabled={disabled}
+                >
+                  <SelectTrigger className={trigger}>
+                    <SelectValue placeholder="Selecione a refeição">
+                      {selectedMeal && (
+                        <div className="flex items-center space-x-2">
+                          <span>{MEAL_LABEL[selectedMeal]}</span>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+
+                  <SelectContent className="max-h-60">
+                    <div className="p-2 text-xs text-gray-500 border-b">
+                      Selecione o tipo de refeição
+                    </div>
+                    {mealKeys.map((k) => {
+                      const selected = k === selectedMeal;
+                      return (
+                        <SelectItem
+                          className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50 transition-colors"
+                          value={k}
+                          key={k}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{MEAL_LABEL[k]}</span>
+                            {selected && (
+                              <Check className="h-4 w-4 text-green-600 ml-2" />
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+
+                {selectedMeal && !isValidMeal && (
+                  <div className="text-xs text-red-600 flex items-center space-x-1">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>Refeição inválida selecionada</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Unidade (já no estilo certo) */}
+        <div className="flex-1">
           <div className="flex items-center gap-2">
-            <Utensils className="h-4 w-4 text-gray-500" />
-            <Select
-              value={selectedMeal}
-              onValueChange={(v) => setSelectedMeal(v as MealKey)}
-            >
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Selecione a refeição" />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(MEAL_LABEL) as MealKey[]).map((k) => (
-                  <SelectItem value={k} key={k}>
-                    {MEAL_LABEL[k]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="w-full sm:w-64">
+              <UnitSelector
+                value={selectedUnit}
+                onChange={setSelectedUnit}
+                placeholder="Selecione a OM..."
+              />
+            </div>
           </div>
         </div>
 
+        {/* Ações do scanner (inalteradas) */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={actions.toggleScan}>
             <Camera className="h-4 w-4 mr-2" />
-            {scanState.isScanning ? "Pausar" : "Iniciar"}
+            {scannerState.isScanning ? "Pausar" : "Iniciar"}
           </Button>
           <Button variant="outline" size="sm" onClick={actions.refresh}>
             <RefreshCw
-              className={`h-4 w-4 ${scanState.isScanning ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${scannerState.isScanning ? "animate-spin" : ""}`}
             />
           </Button>
-          {scannedResult && (
+          {lastScanResult && (
             <Button variant="secondary" size="sm" onClick={actions.clearResult}>
               Limpar último
             </Button>
@@ -376,13 +636,13 @@ export default function Qr(): JSX.Element {
       {/* Leitor de QR */}
       <div className="qr-reader relative">
         <video
-          ref={videoEl}
+          ref={videoRef}
           className="rounded-md w-full max-h-[60vh] object-cover"
         />
-        <div ref={qrBoxEl} className="qr-box pointer-events-none" />
-        {scannedResult && (
+        <div ref={qrBoxRef} className="qr-box pointer-events-none" />
+        {lastScanResult && (
           <p className="absolute top-2 left-2 z-50 text-white bg-black/60 rounded px-2 py-1">
-            Último UUID: {scannedResult}
+            Último UUID: {lastScanResult}
           </p>
         )}
       </div>
@@ -397,7 +657,7 @@ export default function Qr(): JSX.Element {
               {MEAL_LABEL[selectedMeal]}
             </p>
           </div>
-          <Badge variant="secondary">{presence.length}</Badge>
+          <Badge variant="secondary">{presences.length}</Badge>
         </div>
         <div className="overflow-x-auto">
           <Table>
@@ -406,46 +666,152 @@ export default function Qr(): JSX.Element {
                 <TableHead>UUID</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Refeição</TableHead>
+                <TableHead>Previsão</TableHead>
                 <TableHead>Registrado em</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {presence.length === 0 ? (
+              {presences.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-500">
+                  <TableCell colSpan={6} className="text-center text-gray-500">
                     Nenhuma presença registrada ainda.
                   </TableCell>
                 </TableRow>
               ) : (
-                presence.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-mono text-xs">
-                      {row.user_id}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(row.date).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>{MEAL_LABEL[row.meal]}</TableCell>
-                    <TableCell>
-                      {new Date(row.created_at).toLocaleString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => actions.removePresence(row.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                presences.map((row) => {
+                  const saidWouldAttend = forecastMap[row.user_id] ?? false;
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-mono text-xs">
+                        {row.user_id}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(row.date).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>{MEAL_LABEL[row.meal]}</TableCell>
+                      <TableCell>
+                        {saidWouldAttend ? (
+                          <Badge className="bg-green-100 text-green-700 border border-green-200">
+                            Sim
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-gray-600">
+                            Não
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(row.created_at).toLocaleString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => actions.removePresence(row)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </div>
       </div>
+
+      {/* Dialogo de decisão do fiscal */}
+      <AlertDialog
+        open={dialog.open}
+        onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar entrada do militar</AlertDialogTitle>
+            <AlertDialogDescription>
+              UUID: {dialog.uuid}
+              <br />
+              Previsão do sistema:{" "}
+              {dialog.systemForecast === null
+                ? "Não encontrado"
+                : dialog.systemForecast
+                  ? "Previsto"
+                  : "Não previsto"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Está na previsão?</div>
+              <div className="flex gap-2">
+                <Button
+                  disabled
+                  variant={
+                    dialog.forecastChoice === "sim" ? "default" : "outline"
+                  }
+                  size="sm"
+                  onClick={() =>
+                    setDialog((d) => ({ ...d, forecastChoice: "sim" }))
+                  }
+                >
+                  Sim
+                </Button>
+                <Button
+                  disabled
+                  variant={
+                    dialog.forecastChoice === "nao" ? "default" : "outline"
+                  }
+                  size="sm"
+                  onClick={() =>
+                    setDialog((d) => ({ ...d, forecastChoice: "nao" }))
+                  }
+                >
+                  Não
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Vai entrar?</div>
+              <div className="flex gap-2">
+                <Button
+                  variant={dialog.willEnter === "sim" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDialog((d) => ({ ...d, willEnter: "sim" }))}
+                >
+                  Sim
+                </Button>
+                <Button
+                  variant={dialog.willEnter === "nao" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDialog((d) => ({ ...d, willEnter: "nao" }))}
+                >
+                  Não
+                </Button>
+              </div>
+            </div>
+
+            {selectedUnit && (
+              <div className="text-xs text-gray-500">
+                OM selecionada: {selectedUnit}
+              </div>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setDialog((d) => ({ ...d, open: false }))}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDialog}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
