@@ -61,6 +61,7 @@ interface PresenceRecord {
   user_id: string; // uuid do militar (nome da coluna do banco mantido)
   date: string; // yyyy-mm-dd
   meal: MealKey;
+  unidade: string; // OM
   created_at: string;
 }
 
@@ -116,7 +117,7 @@ export default function Qr(): JSX.Element {
     () => new Date().toISOString().split("T")[0]
   );
   const [selectedMeal, setSelectedMeal] = useState<MealKey>("almoco");
-  const [selectedUnit, setSelectedUnit] = useState<string>("");
+  const [selectedUnit, setSelectedUnit] = useState<string>("DIRAD - DIRAD");
 
   const [presences, setPresences] = useState<PresenceRecord[]>([]);
 
@@ -211,9 +212,10 @@ export default function Qr(): JSX.Element {
     const loadPresence = async () => {
       const { data, error } = await supabase
         .from("rancho_presencas")
-        .select("id, user_id, date, meal, created_at")
+        .select("id, user_id, date, meal, unidade, created_at")
         .eq("date", selectedDate)
         .eq("meal", selectedMeal)
+        .eq("unidade", selectedUnit)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -233,6 +235,7 @@ export default function Qr(): JSX.Element {
           .select("user_id, vai_comer")
           .eq("data", selectedDate)
           .eq("refeicao", selectedMeal)
+          .eq("unidade", selectedUnit)
           .in("user_id", userIds);
 
         if (prevErr) {
@@ -267,6 +270,7 @@ export default function Qr(): JSX.Element {
         .eq("user_id", uuid)
         .eq("data", selectedDate)
         .eq("refeicao", selectedMeal)
+        .eq("unidade", selectedUnit)
         .maybeSingle();
 
       if (prevError) throw prevError;
@@ -304,10 +308,22 @@ export default function Qr(): JSX.Element {
         return;
       }
 
-      // Inserir presença (única por date+meal+user_id)
+      // Inserir presença (única por date+meal+user_id+unidade)
+      if (!selectedUnit) {
+        toast.error("Selecione a OM", {
+          description: "É necessário informar a unidade.",
+        });
+        setDialog((d) => ({ ...d, open: false }));
+        return;
+      }
       const { data: inserted, error: insError } = await supabase
         .from("rancho_presencas")
-        .insert({ user_id: uuid, date: selectedDate, meal: selectedMeal })
+        .insert({
+          user_id: uuid,
+          date: selectedDate,
+          meal: selectedMeal,
+          unidade: selectedUnit,
+        })
         .select();
 
       if (insError) {
