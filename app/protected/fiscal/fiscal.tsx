@@ -768,9 +768,6 @@ export default function Qr(): JSX.Element {
                     dialog.forecastChoice === "sim" ? "default" : "outline"
                   }
                   size="sm"
-                  onClick={() =>
-                    setDialog((d) => ({ ...d, forecastChoice: "sim" }))
-                  }
                 >
                   Sim
                 </Button>
@@ -780,9 +777,6 @@ export default function Qr(): JSX.Element {
                     dialog.forecastChoice === "nao" ? "default" : "outline"
                   }
                   size="sm"
-                  onClick={() =>
-                    setDialog((d) => ({ ...d, forecastChoice: "nao" }))
-                  }
                 >
                   Não
                 </Button>

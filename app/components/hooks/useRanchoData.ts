@@ -58,6 +58,19 @@ const createEmptyDayMeals = (): DayMeals => ({
   ceia: false,
 });
 
+/**
+ * Formata um objeto Date para uma string 'YYYY-MM-DD' respeitando o fuso horário local.
+ * @param date O objeto Date a ser formatado.
+ * @returns A data formatada como string.
+ */
+const toYYYYMMDD = (date: Date): string => {
+  const year = date.getFullYear();
+  // getMonth() é 0-indexado (0-11), então somamos 1
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const generateDates = (days: number): string[] => {
   const dates: string[] = [];
   const today = new Date();
@@ -65,7 +78,7 @@ const generateDates = (days: number): string[] => {
   for (let i = 0; i < days; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
-    dates.push(date.toISOString().split("T")[0]);
+    dates.push(toYYYYMMDD(date)); // CORRIGIDO: Usa a função auxiliar para evitar problemas de fuso
   }
 
   return dates;
@@ -92,7 +105,7 @@ export const useRanchoData = (): RanchoDataHook => {
 
   // Memorizar valores estáveis
   const dates = useMemo(() => generateDates(DAYS_TO_SHOW), []);
-  const todayString = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const todayString = useMemo(() => toYYYYMMDD(new Date()), []); // CORRIGIDO: Usa a função auxiliar
 
   // Callbacks estáveis
   const clearMessages = useCallback(() => {
