@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { UNIDADES_DISPONIVEIS } from "@/components/constants/rancho";
+import { useUnidades } from "./hooks/useUnidades";
 
 interface UnidadeDisponivel {
   value: string;
@@ -37,11 +37,10 @@ export const UnitSelector = memo<UnitSelectorProps>(
     size = "md",
     placeholder = "Selecione uma unidade...",
   }) => {
+    const { unidades } = useUnidades();
     // Memoizar dados computados
     const selectorData = useMemo(() => {
-      const selectedUnit = UNIDADES_DISPONIVEIS.find(
-        (unit) => unit.value === value
-      );
+      const selectedUnit = unidades.find((unit) => unit.value === value);
       const isValidSelection = Boolean(selectedUnit);
       const displayLabel = selectedUnit?.label || value;
 
@@ -50,7 +49,7 @@ export const UnitSelector = memo<UnitSelectorProps>(
         isValidSelection,
         displayLabel,
       };
-    }, [value]);
+    }, [JSON.stringify(unidades), value]);
 
     // Memoizar classes CSS baseadas nas props
     const classes = useMemo(() => {
@@ -108,7 +107,7 @@ export const UnitSelector = memo<UnitSelectorProps>(
     // Memoizar itens do select
     const selectItems = useMemo(
       () =>
-        UNIDADES_DISPONIVEIS.map((unidade: UnidadeDisponivel) => (
+        unidades.map((unidade: UnidadeDisponivel) => (
           <SelectItem
             className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50 transition-colors"
             key={unidade.value}
@@ -122,7 +121,7 @@ export const UnitSelector = memo<UnitSelectorProps>(
             </div>
           </SelectItem>
         )),
-      [value]
+      [JSON.stringify(unidades), value]
     );
 
     // Memoizar badges e indicadores

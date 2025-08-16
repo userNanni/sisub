@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { UNIDADES_DISPONIVEIS } from "@/components/constants/rancho";
+import { useUnidades } from "./hooks/useUnidades";
 
 interface DefaultUnitSelectorProps {
   defaultUnit: string;
@@ -38,13 +38,14 @@ export const DefaultUnitSelector = memo<DefaultUnitSelectorProps>(
     onCancel,
     isApplying,
   }) => {
+    const { unidades } = useUnidades();
     // Memoizar dados computados
     const selectorData = useMemo(() => {
       const cardsCount = cardsWithoutUnit.length;
       const hasCardsToApply = cardsCount > 0;
       const selectedUnitLabel =
-        UNIDADES_DISPONIVEIS.find((unit) => unit.value === defaultUnit)
-          ?.label || defaultUnit;
+        unidades.find((unit) => unit.value === defaultUnit)?.label ||
+        defaultUnit;
 
       return {
         cardsCount,
@@ -104,7 +105,7 @@ export const DefaultUnitSelector = memo<DefaultUnitSelectorProps>(
     // Memoizar conteúdo dos itens do select
     const selectItems = useMemo(
       () =>
-        UNIDADES_DISPONIVEIS.map((unidade) => (
+        unidades.map((unidade) => (
           <SelectItem
             className="cursor-pointer hover:bg-orange-50 focus:bg-orange-50"
             key={unidade.value}

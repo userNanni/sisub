@@ -1,6 +1,6 @@
 import { Coffee, Utensils, Moon, Sun } from "lucide-react";
 
-export const UNIDADES_DISPONIVEIS = [
+export const FALLBACK_UNIDADES = [
   { value: "GAP-RJ - HCA", label: "GAP-RJ - HCA" },
   { value: "GAP-RJ - GAP SEDE", label: "GAP-RJ - GAP SEDE" },
   { value: "GAP-RJ - GARAGEM", label: "GAP-RJ - GARAGEM" },
