@@ -1,29 +1,34 @@
-import { useEffect, useMemo, useRef, useState, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import QrScanner from "qr-scanner";
 import supabase from "@/utils/supabase";
 
 // UI & Icons
 import { Button } from "@/components/ui/button";
-import { Camera, RefreshCw, Trash2 } from "lucide-react";
-
+import { Camera, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import Filters from "~/components/filters";
 import {
   MealKey,
-  MEAL_LABEL,
   DialogState,
   generateRestrictedDates,
-  PresenceRecord,
 } from "~/utils/FiscalUtils";
 import FiscalDialog from "~/components/FiscalDialog";
 import PresenceTable from "~/components/PresenceTable";
+import { usePresenceManagement } from "~/components/hooks/usePresenceManagement"; // Importe o novo hook
+import { Checkbox } from "~/components/ui/checkbox";
 
 interface ScannerState {
   isReady: boolean;
   isScanning: boolean;
   hasPermission: boolean;
   error?: string;
+}
+
+interface FiscalFilters {
+  date: string;
+  meal: MealKey;
+  unit: string;
 }
 
 export function meta() {
@@ -36,10 +41,11 @@ export function meta() {
   ];
 }
 
-export default function Qr(): JSX.Element {
+export default function Qr() {
   const scannerRef = useRef<QrScanner | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const qrBoxRef = useRef<HTMLDivElement>(null);
+  const [autoCloseDialog, setAutoCloseDialog] = useState(true);
 
   const [scannerState, setScannerState] = useState<ScannerState>({
     isReady: false,
@@ -47,22 +53,18 @@ export default function Qr(): JSX.Element {
     hasPermission: true,
   });
   const dates = useMemo(() => generateRestrictedDates(), []);
-
   const [lastScanResult, setLastScanResult] = useState<string>("");
 
-  const [selectedDate, setSelectedDate] = useState<string>(dates[1]);
-  const [selectedMeal, setSelectedMeal] = useState<MealKey>("almoco");
-  const [selectedUnit, setSelectedUnit] = useState<string>("DIRAD - DIRAD");
-
-  const currentFiltersRef = useRef({
-    selectedDate,
-    selectedMeal,
-    selectedUnit,
+  const [filters, setFilters] = useState<FiscalFilters>({
+    date: dates[1],
+    meal: "almoco",
+    unit: "DIRAD - DIRAD",
   });
 
-  const [presences, setPresences] = useState<PresenceRecord[]>([]);
-
-  const [forecastMap, setForecastMap] = useState<Record<string, boolean>>({});
+  const currentFiltersRef = useRef(filters);
+  useEffect(() => {
+    currentFiltersRef.current = filters;
+  }, [filters]);
 
   const [dialog, setDialog] = useState<DialogState>({
     open: false,
@@ -71,7 +73,10 @@ export default function Qr(): JSX.Element {
     willEnter: "sim",
   });
 
-  // Iniciar scanner
+  // Lógica de dados agora vem do hook, que é alimentado pelos filtros
+  const { presences, forecastMap, confirmPresence, removePresence } =
+    usePresenceManagement(filters);
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -143,70 +148,19 @@ export default function Qr(): JSX.Element {
     };
   }, []);
 
-  useEffect(() => {
-    currentFiltersRef.current = { selectedDate, selectedMeal, selectedUnit };
-
-    const loadPresence = async () => {
-      const { data, error } = await supabase
-        .from("rancho_presencas")
-        .select("id, user_id, date, meal, unidade, created_at")
-        .eq("date", selectedDate)
-        .eq("refeicao", selectedMeal)
-        .eq("unidade", selectedUnit)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Erro ao buscar presenças:", error);
-        toast.error("Erro", {
-          description: "Não foi possível carregar as presenças.",
-        });
-        return;
-      }
-      const rows = data || [];
-      setPresences(rows);
-
-      if (rows.length > 0) {
-        const userIds = Array.from(new Set(rows.map((p) => p.user_id)));
-        const { data: previsoes, error: prevErr } = await supabase
-          .from("rancho_previsoes")
-          .select("user_id, vai_comer")
-          .eq("data", selectedDate)
-          .eq("refeicao", selectedMeal)
-          .eq("unidade", selectedUnit)
-          .in("user_id", userIds);
-
-        if (prevErr) {
-          console.warn("Falha ao buscar previsões:", prevErr);
-          setForecastMap({});
-        } else {
-          const map: Record<string, boolean> = {};
-          for (const r of previsoes ?? []) {
-            map[r.user_id] = !!r.vai_comer;
-          }
-          setForecastMap(map);
-        }
-      } else {
-        setForecastMap({});
-      }
-    };
-
-    loadPresence();
-  }, [selectedDate, selectedMeal, selectedUnit]);
-
   const onScanSuccess = async (result: QrScanner.ScanResult) => {
     const uuid = (result?.data || "").trim();
     if (!uuid) return;
 
     const {
-      selectedDate: currentDate,
-      selectedMeal: currentMeal,
-      selectedUnit: currentUnit,
+      date: currentDate,
+      meal: currentMeal,
+      unit: currentUnit,
     } = currentFiltersRef.current;
-
     setLastScanResult(uuid);
 
     try {
-      const { data: previsao, error: prevError } = await supabase
+      const { data: previsao } = await supabase
         .from("rancho_previsoes")
         .select("vai_comer")
         .eq("user_id", uuid)
@@ -215,8 +169,6 @@ export default function Qr(): JSX.Element {
         .eq("unidade", currentUnit)
         .maybeSingle();
 
-      if (prevError) throw prevError;
-      console.log("Previsão:", previsao);
       setDialog({
         open: true,
         uuid,
@@ -233,113 +185,73 @@ export default function Qr(): JSX.Element {
     console.warn("QR Error:", err);
   };
 
-  const confirmDialog = async () => {
-    const uuid = dialog.uuid;
-    if (!uuid) return;
-
-    const willEnter = dialog.willEnter === "sim";
+  // Função "orquestradora" que usa a lógica do hook
+  const handleConfirmDialog = async () => {
+    if (!dialog.uuid) return;
 
     try {
-      if (!willEnter) {
-        toast.info("Registro atualizado", {
-          description:
-            "Decisão registrada. Militar não entrará para a refeição.",
-        });
-        setDialog((d) => ({ ...d, open: false }));
-        return;
-      }
-
-      if (!selectedUnit) {
-        toast.error("Selecione a OM", {
-          description: "É necessário informar a unidade.",
-        });
-        setDialog((d) => ({ ...d, open: false }));
-        return;
-      }
-      const { data: inserted, error: insError } = await supabase
-        .from("rancho_presencas")
-        .insert({
-          user_id: uuid,
-          date: selectedDate,
-          meal: selectedMeal,
-          unidade: selectedUnit,
-        })
-        .select();
-
-      if (insError) {
-        if ((insError as any).code === "23505") {
-          toast.info("Já registrado", {
-            description: "Este militar já foi marcado presente.",
-          });
-        } else {
-          throw insError;
-        }
-      } else {
-        const newRow = inserted?.[0] as PresenceRecord | undefined;
-        if (newRow) {
-          setPresences((prev) => [newRow, ...prev]);
-
-          toast.success("Presença registrada", {
-            description: `UUID ${uuid} marcado.`,
-          });
-        }
-      }
+      await confirmPresence(dialog.uuid, dialog.willEnter === "sim");
     } catch (err) {
-      console.error("Erro ao confirmar diálogo:", err);
-      toast.error("Erro", { description: "Falha ao salvar decisão." });
+      console.error("Falha ao confirmar presença:", err);
+      // O hook já exibe um toast de erro, não precisa de outro aqui
     } finally {
       setDialog((d) => ({ ...d, open: false }));
     }
   };
+  const toggleScan = useCallback(async () => {
+    if (!scannerRef.current) return;
+    try {
+      if (scannerState.isScanning) {
+        await scannerRef.current.stop();
+        setScannerState((s) => ({ ...s, isScanning: false }));
+      } else {
+        await scannerRef.current.start();
+        setScannerState((s) => ({ ...s, isScanning: true }));
+      }
+    } catch (err) {
+      console.error("Erro ao alternar scanner:", err);
+    }
+  }, [scannerState.isScanning]);
+
+  const refresh = useCallback(async () => {
+    try {
+      await scannerRef.current?.stop();
+    } catch {}
+    try {
+      await scannerRef.current?.start();
+      setScannerState((s) => ({ ...s, isScanning: true, isReady: true }));
+    } catch (err) {
+      console.error("Erro ao atualizar scanner:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Se o diálogo não está aberto ou a opção está desligada, não faz nada.
+    if (!dialog.open || !autoCloseDialog) return;
+
+    // Define um timer para fechar o diálogo após 3 segundos (3000 ms)
+    const timerId = setTimeout(() => {
+      handleConfirmDialog();
+      setDialog((d) => ({ ...d, open: false }));
+    }, 3000);
+
+    // Função de limpeza: será executada se o diálogo for fechado antes do tempo
+    // ou se o componente for desmontado.
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [dialog.open, autoCloseDialog]);
+
+  const clearResult = useCallback(() => setLastScanResult(""), []);
 
   const actions = useMemo(
     () => ({
-      toggleScan: async () => {
-        if (!scannerRef.current) return;
-        try {
-          if (scannerState.isScanning) {
-            await scannerRef.current.stop();
-            setScannerState((s) => ({ ...s, isScanning: false }));
-          } else {
-            await scannerRef.current.start();
-            setScannerState((s) => ({ ...s, isScanning: true }));
-          }
-        } catch (err) {
-          console.error("Erro ao alternar scanner:", err);
-        }
-      },
-      refresh: async () => {
-        try {
-          await scannerRef.current?.stop();
-        } catch {}
-        try {
-          await scannerRef.current?.start();
-          setScannerState((s) => ({ ...s, isScanning: true, isReady: true }));
-        } catch (err) {
-          console.error("Erro ao atualizar scanner:", err);
-        }
-      },
-      clearResult: () => setLastScanResult(""),
-      removePresence: async (row: PresenceRecord) => {
-        const { error } = await supabase
-          .from("rancho_presencas")
-          .delete()
-          .match({
-            id: row.id,
-            date: row.date,
-            meal: row.meal,
-            user_id: row.user_id,
-          });
-
-        if (error) {
-          toast.error("Erro", { description: "Não foi possível excluir." });
-          return;
-        }
-        setPresences((prev) => prev.filter((p) => p.id !== row.id));
-        toast.success("Excluído", { description: "Registro removido." });
-      },
+      toggleScan,
+      refresh,
+      clearResult,
+      removePresence,
     }),
-    [scannerState.isScanning]
+    [toggleScan, refresh, clearResult, removePresence]
   );
 
   return (
@@ -347,14 +259,28 @@ export default function Qr(): JSX.Element {
       {/* Filtros de fiscalização */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
         <Filters
-          selectedDate={selectedDate}
-          setSelectedDate={(v) => setSelectedDate(v)}
-          selectedMeal={selectedMeal}
-          setSelectedMeal={(v) => setSelectedMeal(v)}
-          selectedUnit={selectedUnit}
-          setSelectedUnit={(v) => setSelectedUnit(v)}
+          // Passa o objeto de filtros e as funções de atualização
+          selectedDate={filters.date}
+          setSelectedDate={(v) => setFilters((f) => ({ ...f, date: v }))}
+          selectedMeal={filters.meal}
+          setSelectedMeal={(v) => setFilters((f) => ({ ...f, meal: v }))}
+          selectedUnit={filters.unit}
+          setSelectedUnit={(v) => setFilters((f) => ({ ...f, unit: v }))}
           dates={dates}
         />
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="autoClose"
+            checked={autoCloseDialog}
+            onCheckedChange={(v) => setAutoCloseDialog(v)}
+          />
+          <label
+            htmlFor="autoClose"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Fechar auto.
+          </label>
+        </div>
         {/* Ações do scanner */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={actions.toggleScan}>
@@ -388,8 +314,8 @@ export default function Qr(): JSX.Element {
         )}
       </div>
       <PresenceTable
-        selectedDate={selectedDate}
-        selectedMeal={selectedMeal}
+        selectedDate={filters.date}
+        selectedMeal={filters.meal}
         presences={presences}
         forecastMap={forecastMap}
         actions={actions}
@@ -397,8 +323,8 @@ export default function Qr(): JSX.Element {
       <FiscalDialog
         setDialog={(v) => setDialog(v)}
         dialog={dialog}
-        confirmDialog={() => confirmDialog()}
-        selectedUnit={selectedUnit}
+        confirmDialog={handleConfirmDialog}
+        selectedUnit={filters.unit}
       />
     </div>
   );
