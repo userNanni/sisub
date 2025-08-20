@@ -82,7 +82,10 @@ export default function PresenceTable({
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>{formatDate(row.created_at)}</TableCell>
+                      <TableCell>
+                        {" "}
+                        {new Date(row.created_at).toLocaleString("pt-BR")}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
