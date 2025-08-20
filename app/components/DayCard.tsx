@@ -8,8 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MealButton } from "@/components/MealButton";
 import { UnitSelector } from "@/components/UnitSelector";
 import { MEAL_TYPES } from "@/components/constants/rancho";
-import type { DayMeals } from "@/components/utils/RanchoUtils";
-import { cn } from "@/lib/utils";
+import type { DayMeals } from "~/utils/RanchoUtils";
+import { cn } from "~/utils/utils";
 
 interface PendingChange {
   date: string;

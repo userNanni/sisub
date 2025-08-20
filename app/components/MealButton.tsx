@@ -1,7 +1,7 @@
 // components/MealButton.tsx
 import { memo } from "react";
 import { type LucideIcon, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "~/utils/utils";
 
 interface Meal {
   icon: LucideIcon;
