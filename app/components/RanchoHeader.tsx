@@ -101,7 +101,7 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
+          <a href="/" className="flex items-center space-x-3 cursor-pointer">
             {isClient && window.innerWidth >= 640 && (
               <div className="p-2 bg-blue-50 rounded-lg">
                 <Home className="h-5 w-5 text-blue-600" />
@@ -110,7 +110,7 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
             <h1 className="text-2xl sm:text-3xl font-black text-blue-600 k2d-extrabold tracking-tight">
               SISUB
             </h1>
-          </div>
+          </a>
 
           {/* Ações do usuário */}
           <div className="flex items-center space-x-2 sm:space-x-4">

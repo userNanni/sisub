@@ -21,7 +21,7 @@ import {
   getDayOfWeek,
   isDateNear,
   type DayMeals,
-} from "@/components/utils/RanchoUtils";
+} from "~/utils/RanchoUtils";
 import { NEAR_DATE_THRESHOLD } from "@/components/constants/rancho";
 import { DayCardSkeleton } from "@/components/DayCard";
 import SimplifiedMilitaryStatsSkeleton from "~/components/SimplifiedMilitaryStatsSkeleton";

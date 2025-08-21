@@ -2,7 +2,6 @@ import { Outlet, Navigate, useNavigate, NavLink } from "react-router-dom";
 import { useAuth } from "../auth/auth";
 import RanchoHeader from "~/components/RanchoHeader";
 import { useState, useEffect } from "react";
-import { QrCode, Calendar } from "lucide-react";
 
 export default function ProtectedLayout() {
   const navigate = useNavigate();

@@ -3,7 +3,7 @@ import { memo, useMemo } from "react";
 import { CalendarDays, Utensils, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { DayMeals } from "@/components/utils/RanchoUtils";
+import type { DayMeals } from "~/utils/RanchoUtils";
 
 interface Selections {
   [date: string]: DayMeals;
@@ -17,7 +17,7 @@ interface SimplifiedStatsProps {
 const SimplifiedMilitaryStats = memo<SimplifiedStatsProps>(
   ({ selections, dates }) => {
     const stats = useMemo(() => {
-      const today = new Date().toISOString().split("T")[0];
+      // A variável 'today' foi removida pois não era utilizada.
       const next7Days = dates.slice(0, 7);
 
       let totalMealsNext7Days = 0;
@@ -39,6 +39,7 @@ const SimplifiedMilitaryStats = memo<SimplifiedStatsProps>(
       let nextMeal = null;
       const mealOrder = ["cafe", "almoco", "janta", "ceia"];
 
+      // O array 'dates' já vem na ordem correta, começando de hoje (local)
       for (const date of dates) {
         const daySelections = selections[date];
         if (daySelections) {
@@ -60,7 +61,14 @@ const SimplifiedMilitaryStats = memo<SimplifiedStatsProps>(
     }, [selections, dates]);
 
     const formatDate = (dateStr: string) => {
-      const date = new Date(dateStr);
+      // CORRIGIDO: Evita que o fuso horário mude a data para o dia anterior.
+      // new Date('2025-08-16') cria a data em UTC (meia-noite).
+      // Em fusos negativos (como -03:00), isso vira 21:00 do dia anterior.
+      // A solução é construir a data manualmente para forçar o fuso local.
+      const [year, month, day] = dateStr.split("-").map(Number);
+      // O mês no construtor do Date é 0-indexado (0-11), por isso month - 1.
+      const date = new Date(year, month - 1, day);
+
       return date.toLocaleDateString("pt-BR", {
         weekday: "short",
         day: "2-digit",

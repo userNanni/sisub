@@ -5,10 +5,25 @@ import { useAuth } from "./auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Loader2,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
+import { cn } from "~/utils/utils";
 
 import type { Route } from "./+types/login";
 
@@ -26,7 +41,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -60,7 +75,7 @@ export default function Login() {
     const newEmail = e.target.value;
     setEmail(newEmail);
     setApiError(""); // Clear API error when user types
-    
+
     if (newEmail && !FAB_EMAIL_REGEX.test(newEmail)) {
       setEmailError("Por favor, utilize um email institucional (@fab.mil.br).");
     } else {
@@ -76,7 +91,7 @@ export default function Login() {
   const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
     setRememberMe(checked);
-    
+
     if (checked && email && FAB_EMAIL_REGEX.test(email)) {
       localStorage.setItem("fab_remember_email", email);
     } else {
@@ -86,7 +101,7 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!FAB_EMAIL_REGEX.test(email)) {
       setEmailError("O email fornecido não é um email válido da FAB.");
       return;
@@ -103,18 +118,21 @@ export default function Login() {
 
     try {
       await signIn(email, password);
-      
+
       // Save email if remember me is checked
       if (rememberMe) {
         localStorage.setItem("fab_remember_email", email);
       } else {
         localStorage.removeItem("fab_remember_email");
       }
-      
+
       // Navigation is handled by the useEffect above
     } catch (err: any) {
       console.error("Falha no login:", err);
-      setApiError(err.message || "Ocorreu um erro durante a autenticação. Tente mais tarde.");
+      setApiError(
+        err.message ||
+          "Ocorreu um erro durante a autenticação. Tente mais tarde."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -122,7 +140,7 @@ export default function Login() {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!FAB_EMAIL_REGEX.test(resetEmail)) {
       setApiError("Por favor, insira um email válido da FAB.");
       return;
@@ -133,12 +151,16 @@ export default function Login() {
 
     try {
       await resetPassword(resetEmail);
-      setSuccessMessage("Email de recuperação enviado! Verifique sua caixa de entrada.");
+      setSuccessMessage(
+        "Email de recuperação enviado! Verifique sua caixa de entrada."
+      );
       setShowForgotPassword(false);
       setResetEmail("");
     } catch (err: any) {
       console.error("Erro ao enviar email de recuperação:", err);
-      setApiError(err.message || "Erro ao enviar email de recuperação. Tente novamente.");
+      setApiError(
+        err.message || "Erro ao enviar email de recuperação. Tente novamente."
+      );
     } finally {
       setIsResettingPassword(false);
     }
@@ -163,13 +185,12 @@ export default function Login() {
           {showForgotPassword ? "Recuperar Senha" : "Entrar"}
         </CardTitle>
         <CardDescription className="text-center">
-          {showForgotPassword 
+          {showForgotPassword
             ? "Digite seu email para receber instruções de recuperação"
-            : "Acesso restrito a emails @fab.mil.br"
-          }
+            : "Acesso restrito a emails @fab.mil.br"}
         </CardDescription>
       </CardHeader>
-      
+
       {!showForgotPassword ? (
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -179,14 +200,16 @@ export default function Login() {
                 <AlertDescription>{apiError}</AlertDescription>
               </Alert>
             )}
-            
+
             {successMessage && (
               <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
+                <AlertDescription className="text-green-800">
+                  {successMessage}
+                </AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email Institucional</Label>
               <div className="relative">
@@ -197,10 +220,9 @@ export default function Login() {
                   placeholder="seu.nome@fab.mil.br"
                   value={email}
                   onChange={handleEmailChange}
-                  className={cn(
-                    "pl-10",
-                    { "border-red-500 focus-visible:ring-red-500": emailError }
-                  )}
+                  className={cn("pl-10", {
+                    "border-red-500 focus-visible:ring-red-500": emailError,
+                  })}
                   required
                   disabled={isSubmitting}
                   autoComplete="email"
@@ -213,7 +235,7 @@ export default function Login() {
                 </p>
               )}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
@@ -262,7 +284,7 @@ export default function Login() {
                   Lembrar email
                 </Label>
               </div>
-              
+
               <Button
                 type="button"
                 variant="link"
@@ -278,20 +300,25 @@ export default function Login() {
               </Button>
             </div>
           </CardContent>
-          
+
           <CardFooter className="flex flex-col space-y-4">
-            <Button 
-              type="submit" 
-              className="w-full w-full my-6 py-3 text-lg font-semibold" 
+            <Button
+              type="submit"
+              className="w-full w-full my-6 py-3 text-lg font-semibold"
               disabled={isSubmitting || !!emailError || !email || !password}
             >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               {isSubmitting ? "Entrando..." : "Entrar"}
             </Button>
-            
+
             <p className="text-sm text-center text-muted-foreground">
               Não tem uma conta?{" "}
-              <Link to="/register" className="text-primary hover:underline font-medium">
+              <Link
+                to="/register"
+                className="text-primary hover:underline font-medium"
+              >
                 Cadastre-se
               </Link>
             </p>
@@ -306,7 +333,7 @@ export default function Login() {
                 <AlertDescription>{apiError}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="resetEmail">Email Institucional</Label>
               <div className="relative">
@@ -328,17 +355,21 @@ export default function Login() {
               </div>
             </div>
           </CardContent>
-          
+
           <CardFooter className="flex flex-col space-y-4">
-            <Button 
-              type="submit" 
-              className="w-full w-full my-6 py-3 text-lg font-semibold" 
+            <Button
+              type="submit"
+              className="w-full w-full my-6 py-3 text-lg font-semibold"
               disabled={isResettingPassword || !resetEmail}
             >
-              {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isResettingPassword ? "Enviando..." : "Enviar Email de Recuperação"}
+              {isResettingPassword && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isResettingPassword
+                ? "Enviando..."
+                : "Enviar Email de Recuperação"}
             </Button>
-            
+
             <Button
               type="button"
               variant="outline"

@@ -1,75 +1,50 @@
-// Qr.tsx - Fluxo Fiscal
-// 1) Escolher dia e refeição
-// 2) Escanear QRCode do militar (uuid)
-// 3) Validar previsão no Supabase e registrar presença
-// 4) Listar presenças com exclusão
-
-import { useEffect, useMemo, useRef, useState, type JSX } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  useReducer, // Importação correta do useReducer
+} from "react";
 import QrScanner from "qr-scanner";
-import supabase from "@/utils/supabase"; // ajuste este import conforme seu projeto
+import supabase from "@/utils/supabase";
 
 // UI & Icons
 import { Button } from "@/components/ui/button";
-import {
-  Camera,
-  Loader2,
-  RefreshCw,
-  Calendar,
-  Utensils,
-  Trash2,
-} from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Camera, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-type MealKey = "cafe" | "almoco" | "janta" | "ceia";
+import Filters from "~/components/Filters";
+import {
+  MealKey,
+  DialogState,
+  generateRestrictedDates,
+} from "~/utils/FiscalUtils";
+import FiscalDialog from "~/components/FiscalDialog";
+import PresenceTable from "~/components/PresenceTable";
+import { usePresenceManagement } from "~/components/hooks/usePresenceManagement";
+import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
 
-interface ScanState {
+// Tipos de estado e ação para o scanner
+interface ScannerState {
   isReady: boolean;
   isScanning: boolean;
   hasPermission: boolean;
   error?: string;
 }
 
-interface PresenceRow {
-  id: string; // uuid do registro de presença
-  user_id: string; // uuid do militar
-  date: string; // yyyy-mm-dd
+type ScannerAction =
+  | { type: "INITIALIZE_SUCCESS"; hasPermission: boolean }
+  | { type: "INITIALIZE_ERROR"; error: string }
+  | { type: "TOGGLE_SCAN"; isScanning: boolean }
+  | { type: "REFRESH" };
+
+interface FiscalFilters {
+  date: string;
   meal: MealKey;
-  created_at: string;
+  unit: string;
 }
-
-const generateDates = (days: number): string[] => {
-  const dates: string[] = [];
-  const today = new Date();
-  for (let i = 0; i < days; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    dates.push(d.toISOString().split("T")[0]);
-  }
-  return dates;
-};
-
-const MEAL_LABEL: Record<MealKey, string> = {
-  cafe: "Café",
-  almoco: "Almoço",
-  janta: "Jantar",
-  ceia: "Ceia",
-};
 
 export function meta() {
   return [
@@ -81,83 +56,118 @@ export function meta() {
   ];
 }
 
-export default function Qr(): JSX.Element {
-  const scanner = useRef<QrScanner | null>(null);
-  const videoEl = useRef<HTMLVideoElement>(null);
-  const qrBoxEl = useRef<HTMLDivElement>(null);
+// Reducer para gerenciar o estado do scanner
+const scannerReducer = (
+  state: ScannerState,
+  action: ScannerAction
+): ScannerState => {
+  switch (action.type) {
+    case "INITIALIZE_SUCCESS":
+      return {
+        ...state,
+        isReady: true,
+        isScanning: action.hasPermission,
+        hasPermission: action.hasPermission,
+        error: undefined,
+      };
+    case "INITIALIZE_ERROR":
+      return {
+        ...state,
+        isReady: true,
+        isScanning: false,
+        hasPermission: false,
+        error: action.error,
+      };
+    case "TOGGLE_SCAN":
+      return { ...state, isScanning: action.isScanning };
+    case "REFRESH":
+      return { ...state, isScanning: state.hasPermission, error: undefined };
+    default:
+      return state;
+  }
+};
 
-  const [scanState, setScanState] = useState<ScanState>({
+export default function Qr() {
+  const scannerRef = useRef<QrScanner | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const qrBoxRef = useRef<HTMLDivElement>(null);
+  const [autoCloseDialog, setAutoCloseDialog] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const initialState: ScannerState = {
     isReady: false,
     isScanning: false,
-    hasPermission: true,
+    hasPermission: false,
+  };
+
+  const [scannerState, dispatch] = useReducer(scannerReducer, initialState);
+  const dates = useMemo(() => generateRestrictedDates(), []);
+  const [lastScanResult, setLastScanResult] = useState<string>("");
+
+  const [filters, setFilters] = useState<FiscalFilters>({
+    date: dates[1],
+    meal: "almoco",
+    unit: "DIRAD - DIRAD",
   });
-  const [scannedResult, setScannedResult] = useState<string>("");
 
-  const [selectedDate, setSelectedDate] = useState<string>(
-    () => new Date().toISOString().split("T")[0]
-  );
-  const [selectedMeal, setSelectedMeal] = useState<MealKey>("almoco");
-  const [presence, setPresence] = useState<PresenceRow[]>([]);
+  const currentFiltersRef = useRef(filters);
+  useEffect(() => {
+    currentFiltersRef.current = filters;
+  }, [filters]);
 
-  const dates = useMemo(() => generateDates(30), []);
+  const [dialog, setDialog] = useState<DialogState>({
+    open: false,
+    uuid: null,
+    systemForecast: null,
+    willEnter: "sim",
+  });
 
-  // Iniciar scanner
+  const { presences, forecastMap, confirmPresence, removePresence } =
+    usePresenceManagement(filters);
+
   useEffect(() => {
     let isCancelled = false;
 
     const startScanner = async () => {
-      if (!videoEl.current || scanner.current) return;
+      if (!videoRef.current) return;
 
       try {
-        const hasPermission = await navigator.mediaDevices
-          .getUserMedia({ video: { facingMode: { ideal: "environment" } } })
-          .then((stream) => {
-            stream.getTracks().forEach((t) => t.stop());
-            return true;
-          })
-          .catch(() => false);
-
+        const hasPermission = await QrScanner.hasCamera();
         if (!hasPermission) {
           if (!isCancelled) {
-            setScanState((s) => ({
-              ...s,
-              hasPermission: false,
-              isReady: true,
-            }));
+            dispatch({
+              type: "INITIALIZE_ERROR",
+              error: "Permissão da câmera não concedida.",
+            });
           }
           return;
         }
 
-        scanner.current = new QrScanner(
-          videoEl.current,
-          (result) => {
-            onScanSuccess(result);
-          },
+        const scanner = new QrScanner(
+          videoRef.current,
+          (result) => onScanSuccess(result),
           {
             onDecodeError: onScanFail,
             preferredCamera: "environment",
             highlightScanRegion: true,
             highlightCodeOutline: true,
-            overlay: qrBoxEl.current ?? undefined,
+            overlay: qrBoxRef.current ?? undefined,
           }
         );
+        scannerRef.current = scanner;
 
-        await scanner.current.start();
+        await scanner.start();
         if (!isCancelled) {
-          setScanState({
-            isReady: true,
-            isScanning: true,
-            hasPermission: true,
-          });
+          dispatch({ type: "INITIALIZE_SUCCESS", hasPermission: true });
         }
       } catch (err: any) {
         console.error("Erro ao iniciar o scanner:", err);
         if (!isCancelled) {
-          setScanState({
-            isReady: true,
-            isScanning: false,
-            hasPermission: false,
-            error: String(err?.message ?? err),
+          dispatch({
+            type: "INITIALIZE_ERROR",
+            error: String(
+              err?.message ?? "Erro desconhecido ao iniciar a câmera."
+            ),
           });
         }
       }
@@ -167,285 +177,192 @@ export default function Qr(): JSX.Element {
 
     return () => {
       isCancelled = true;
-      scanner.current?.stop();
-      // @ts-ignore
-      scanner.current?.destroy?.();
-      scanner.current = null;
+      scannerRef.current?.stop();
+      scannerRef.current?.destroy();
+      scannerRef.current = null;
     };
   }, []);
 
-  // Carregar presenças já registradas para o filtro atual
-  useEffect(() => {
-    const loadPresence = async () => {
-      const { data, error } = await supabase
-        .from("rancho_presencas")
-        .select("id, user_id, date, meal, created_at")
-        .eq("date", selectedDate)
-        .eq("meal", selectedMeal)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Erro ao buscar presenças:", error);
-        toast.error("Erro", {
-          description: "Não foi possível carregar as presenças.",
-        });
-        return;
-      }
-      setPresence(data || []);
-    };
-
-    loadPresence();
-  }, [selectedDate, selectedMeal]);
-
   const onScanSuccess = async (result: QrScanner.ScanResult) => {
     const uuid = (result?.data || "").trim();
-    if (!uuid) return;
+    if (!uuid || uuid === lastScanResult) return;
 
-    setScannedResult(uuid);
+    setIsProcessing(true);
+    setLastScanResult(uuid);
+    const { date, meal, unit } = currentFiltersRef.current;
 
     try {
-      // 1) Valida previsão: precisa estar TRUE para aquele dia/refeição
-      const { data: previsao, error: prevError } = await supabase
+      const { data: previsao } = await supabase
         .from("rancho_previsoes")
         .select("vai_comer")
         .eq("user_id", uuid)
-        .eq("data", selectedDate)
-        .eq("refeicao", selectedMeal)
+        .eq("data", date)
+        .eq("refeicao", meal)
+        .eq("unidade", unit)
         .maybeSingle();
 
-      if (prevError) throw prevError;
-
-      if (!previsao || !previsao.vai_comer) {
-        toast.error("Não autorizado", {
-          description: "Militar não previsto para esta refeição/dia.",
-        });
-        return;
-      }
-
-      // 2) Insere presença (única por date+meal+user_id)
-      const { data: inserted, error: insError } = await supabase
-        .from("rancho_presencas")
-        .insert({ user_id: uuid, date: selectedDate, meal: selectedMeal })
-        .select();
-
-      if (insError) {
-        if ((insError as any).code === "23505") {
-          toast.info("Já registrado", {
-            description: "Este militar já foi marcado presente.",
-          });
-        } else {
-          throw insError;
-        }
-        return;
-      }
-
-      const newRow = inserted?.[0] as PresenceRow | undefined;
-      if (newRow) {
-        setPresence((prev) => [newRow, ...prev]);
-        toast.success("Presença registrada", {
-          description: `UUID ${uuid} marcado.`,
-        });
-      }
+      setDialog({
+        open: true,
+        uuid,
+        systemForecast: previsao ? !!previsao.vai_comer : null,
+        willEnter: "sim",
+      });
     } catch (err) {
-      console.error("Erro no processamento do QR:", err);
+      console.error("Erro ao preparar diálogo:", err);
       toast.error("Erro", { description: "Falha ao processar QR." });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const onScanFail = (err: string | Error) => {
-    console.warn("QR Error:", err);
+    if (String(err) !== "No QR code found") {
+      console.warn("QR Scan Error:", err);
+    }
   };
+
+  const handleConfirmDialog = useCallback(async () => {
+    if (!dialog.uuid) return;
+
+    try {
+      await confirmPresence(dialog.uuid, dialog.willEnter === "sim");
+    } catch (err) {
+      console.error("Falha ao confirmar presença:", err);
+    } finally {
+      setDialog((d) => ({ ...d, open: false, uuid: null }));
+    }
+  }, [dialog.uuid, dialog.willEnter, confirmPresence]);
+
+  const toggleScan = useCallback(async () => {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+
+    try {
+      if (scannerState.isScanning) {
+        scanner.stop();
+        dispatch({ type: "TOGGLE_SCAN", isScanning: false });
+      } else {
+        await scanner.start();
+        dispatch({ type: "TOGGLE_SCAN", isScanning: true });
+      }
+    } catch (err) {
+      console.error("Erro ao alternar scanner:", err);
+    }
+  }, [scannerState.isScanning]);
+
+  const refresh = useCallback(async () => {
+    if (scannerRef.current) {
+      await scannerRef.current.start();
+      dispatch({ type: "REFRESH" });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!dialog.open || !autoCloseDialog) return;
+
+    const timerId = setTimeout(() => {
+      handleConfirmDialog();
+    }, 3000);
+
+    return () => clearTimeout(timerId);
+  }, [dialog.open, autoCloseDialog, handleConfirmDialog]);
+
+  const clearResult = useCallback(() => setLastScanResult(""), []);
 
   const actions = useMemo(
     () => ({
-      toggleScan: async () => {
-        if (!scanner.current) return;
-        try {
-          if (scanState.isScanning) {
-            await scanner.current.stop();
-            setScanState((s) => ({ ...s, isScanning: false }));
-          } else {
-            await scanner.current.start();
-            setScanState((s) => ({ ...s, isScanning: true }));
-          }
-        } catch (err) {
-          console.error("Erro ao alternar scanner:", err);
-        }
-      },
-      refresh: async () => {
-        try {
-          await scanner.current?.stop();
-        } catch {}
-        try {
-          await scanner.current?.start();
-          setScanState((s) => ({ ...s, isScanning: true, isReady: true }));
-        } catch (err) {
-          console.error("Erro ao atualizar scanner:", err);
-        }
-      },
-      clearResult: () => setScannedResult(""),
-      removePresence: async (id: string) => {
-        const { error } = await supabase
-          .from("rancho_presencas")
-          .delete()
-          .eq("id", id);
-        if (error) {
-          toast.error("Erro", { description: "Não foi possível excluir." });
-          return;
-        }
-        setPresence((prev) => prev.filter((p) => p.id !== id));
-      },
+      toggleScan,
+      refresh,
+      clearResult,
+      removePresence,
     }),
-    [scanState.isScanning]
+    [toggleScan, refresh, clearResult, removePresence]
   );
 
   return (
     <div className="space-y-6">
-      {/* Filtros de fiscalização */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Dia
-          </label>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <Select
-              value={selectedDate}
-              onValueChange={(v) => setSelectedDate(v)}
-            >
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Selecione o dia" />
-              </SelectTrigger>
-              <SelectContent>
-                {dates.map((d) => (
-                  <SelectItem value={d} key={d}>
-                    {new Date(d).toLocaleDateString("pt-BR", {
-                      weekday: "short",
-                      day: "2-digit",
-                      month: "2-digit",
-                    })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Refeição
-          </label>
-          <div className="flex items-center gap-2">
-            <Utensils className="h-4 w-4 text-gray-500" />
-            <Select
-              value={selectedMeal}
-              onValueChange={(v) => setSelectedMeal(v as MealKey)}
-            >
-              <SelectTrigger className="w-full sm:w-64">
-                <SelectValue placeholder="Selecione a refeição" />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(MEAL_LABEL) as MealKey[]).map((k) => (
-                  <SelectItem value={k} key={k}>
-                    {MEAL_LABEL[k]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
+        <Filters
+          selectedDate={filters.date}
+          setSelectedDate={(newDate: string) =>
+            setFilters((f) => ({ ...f, date: newDate }))
+          }
+          selectedMeal={filters.meal}
+          setSelectedMeal={(newMeal: MealKey) =>
+            setFilters((f) => ({ ...f, meal: newMeal }))
+          }
+          selectedUnit={filters.unit}
+          setSelectedUnit={(newUnit: string) =>
+            setFilters((f) => ({ ...f, unit: newUnit }))
+          }
+          dates={dates}
+        />
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={actions.toggleScan}>
+          <Switch
+            id="autoClose"
+            checked={autoCloseDialog}
+            onCheckedChange={setAutoCloseDialog}
+          />
+          <Label htmlFor="autoClose">
+            {autoCloseDialog ? "Fechar Auto." : "Fechar Manual"}
+          </Label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={actions.toggleScan}
+            disabled={!scannerState.hasPermission}
+          >
             <Camera className="h-4 w-4 mr-2" />
-            {scanState.isScanning ? "Pausar" : "Iniciar"}
+            {scannerState.isScanning ? "Pausar" : "Ler"}
           </Button>
-          <Button variant="outline" size="sm" onClick={actions.refresh}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={actions.refresh}
+            disabled={!scannerState.hasPermission}
+          >
             <RefreshCw
-              className={`h-4 w-4 ${scanState.isScanning ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${scannerState.isScanning ? "animate-spin" : ""}`}
             />
           </Button>
-          {scannedResult && (
+          {lastScanResult && (
             <Button variant="secondary" size="sm" onClick={actions.clearResult}>
-              Limpar último
+              Limpar
             </Button>
           )}
         </div>
       </div>
 
-      {/* Leitor de QR */}
       <div className="qr-reader relative">
         <video
-          ref={videoEl}
+          ref={videoRef}
           className="rounded-md w-full max-h-[60vh] object-cover"
         />
-        <div ref={qrBoxEl} className="qr-box pointer-events-none" />
-        {scannedResult && (
+        {!scannerState.hasPermission && scannerState.isReady && (
+          <div className="text-center p-4 border rounded-md bg-destructive/10 text-destructive">
+            <p>{scannerState.error || "Acesso à câmera negado."}</p>
+          </div>
+        )}
+        <div ref={qrBoxRef} className="qr-box pointer-events-none" />
+        {lastScanResult && (
           <p className="absolute top-2 left-2 z-50 text-white bg-black/60 rounded px-2 py-1">
-            Último UUID: {scannedResult}
+            Último UUID: {lastScanResult}
           </p>
         )}
       </div>
-
-      {/* Lista de presenças */}
-      <div className="bg-white rounded-lg border shadow-sm">
-        <div className="px-4 py-3 border-b flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold">Presenças registradas</h3>
-            <p className="text-sm text-gray-500">
-              Dia {new Date(selectedDate).toLocaleDateString("pt-BR")} ·{" "}
-              {MEAL_LABEL[selectedMeal]}
-            </p>
-          </div>
-          <Badge variant="secondary">{presence.length}</Badge>
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>UUID</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Refeição</TableHead>
-                <TableHead>Registrado em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {presence.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-500">
-                    Nenhuma presença registrada ainda.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                presence.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-mono text-xs">
-                      {row.user_id}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(row.date).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>{MEAL_LABEL[row.meal]}</TableCell>
-                    <TableCell>
-                      {new Date(row.created_at).toLocaleString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => actions.removePresence(row.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <PresenceTable
+        selectedDate={filters.date}
+        selectedMeal={filters.meal}
+        presences={presences}
+        forecastMap={forecastMap}
+        actions={actions}
+      />
+      <FiscalDialog
+        setDialog={setDialog}
+        dialog={dialog}
+        confirmDialog={handleConfirmDialog}
+        selectedUnit={filters.unit}
+      />
     </div>
   );
 }

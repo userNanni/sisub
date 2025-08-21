@@ -8,8 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MealButton } from "@/components/MealButton";
 import { UnitSelector } from "@/components/UnitSelector";
 import { MEAL_TYPES } from "@/components/constants/rancho";
-import type { DayMeals } from "@/components/utils/RanchoUtils";
-import { cn } from "@/lib/utils";
+import type { DayMeals } from "~/utils/RanchoUtils";
+import { cn } from "~/utils/utils";
 
 interface PendingChange {
   date: string;
@@ -247,8 +247,8 @@ export const DayCard = memo<DayCardProps>(
                           key={meal.value}
                           className={cn(
                             "w-2 h-2 rounded-full transition-all duration-200",
-                            isSelected 
-                              ? "bg-green-500 scale-110" 
+                            isSelected
+                              ? "bg-green-500 scale-110"
                               : "bg-muted-foreground/30"
                           )}
                           title={`${meal.label}: ${
