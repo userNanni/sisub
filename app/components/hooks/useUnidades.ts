@@ -48,7 +48,7 @@ export const useUnidades = () => {
     };
 
     fetchUnidades();
-  }, [JSON.stringify(unidades)]); 
+  }, []); 
 
   return { unidades, isLoading, error };
 };
