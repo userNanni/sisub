@@ -92,6 +92,7 @@ export default function Qr() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const qrBoxRef = useRef<HTMLDivElement>(null);
   const [autoCloseDialog, setAutoCloseDialog] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const initialState: ScannerState = {
     isReady: false,
@@ -186,6 +187,7 @@ export default function Qr() {
     const uuid = (result?.data || "").trim();
     if (!uuid || uuid === lastScanResult) return;
 
+    setIsProcessing(true);
     setLastScanResult(uuid);
     const { date, meal, unit } = currentFiltersRef.current;
 
@@ -208,6 +210,8 @@ export default function Qr() {
     } catch (err) {
       console.error("Erro ao preparar diálogo:", err);
       toast.error("Erro", { description: "Falha ao processar QR." });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
