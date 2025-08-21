@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { UnitSelector } from "@/components/UnitSelector";
 import { MEAL_LABEL, MealKey } from "@/utils/FiscalUtils";
+import { formatDate } from "~/utils/RanchoUtils";
 
 interface FiltersProps {
   selectedDate: string;
@@ -86,7 +87,7 @@ export default function Filters({
                   <SelectValue placeholder="Selecione o dia">
                     {selectedDate && (
                       <div className="flex items-center space-x-2">
-                        <span>{selectedDate}</span>
+                        <span>{formatDate(selectedDate)}</span>
                       </div>
                     )}
                   </SelectValue>
@@ -105,7 +106,7 @@ export default function Filters({
                         key={d}
                       >
                         <div className="flex items-center justify-between w-full">
-                          <span>{d}</span>
+                          <span>{formatDate(d)}</span>
                           {selected && (
                             <Check className="h-4 w-4 text-green-600 ml-2" />
                           )}

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-import Filters from "~/components/filters";
+import Filters from "~/components/Filters";
 import {
   MealKey,
   DialogState,
@@ -17,6 +17,8 @@ import FiscalDialog from "~/components/FiscalDialog";
 import PresenceTable from "~/components/PresenceTable";
 import { usePresenceManagement } from "~/components/hooks/usePresenceManagement"; // Importe o novo hook
 import { Checkbox } from "~/components/ui/checkbox";
+import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
 
 interface ScannerState {
   isReady: boolean;
@@ -268,21 +270,17 @@ export default function Qr() {
           setSelectedUnit={(v) => setFilters((f) => ({ ...f, unit: v }))}
           dates={dates}
         />
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="autoClose"
-            checked={autoCloseDialog}
-            onCheckedChange={(v) => setAutoCloseDialog(v)}
-          />
-          <label
-            htmlFor="autoClose"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Fechar auto.
-          </label>
-        </div>
+        <div className="flex items-center space-x-2"></div>
         {/* Ações do scanner */}
         <div className="flex items-center gap-2">
+          <Switch
+            id="autoClose"
+            checked={autoCloseDialog}
+            onCheckedChange={setAutoCloseDialog}
+          />
+          <Label htmlFor="autoClose">
+            {autoCloseDialog ? "Fechar Auto." : "Fechar Manual"}
+          </Label>
           <Button variant="outline" size="sm" onClick={actions.toggleScan}>
             <Camera className="h-4 w-4 mr-2" />
             {scannerState.isScanning ? "Pausar" : "Iniciar"}
