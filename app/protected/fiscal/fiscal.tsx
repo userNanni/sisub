@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  useReducer, // Importação correta do useReducer
+} from "react";
 import QrScanner from "qr-scanner";
 import supabase from "@/utils/supabase";
 
@@ -15,17 +22,23 @@ import {
 } from "~/utils/FiscalUtils";
 import FiscalDialog from "~/components/FiscalDialog";
 import PresenceTable from "~/components/PresenceTable";
-import { usePresenceManagement } from "~/components/hooks/usePresenceManagement"; // Importe o novo hook
-import { Checkbox } from "~/components/ui/checkbox";
+import { usePresenceManagement } from "~/components/hooks/usePresenceManagement";
 import { Switch } from "~/components/ui/switch";
 import { Label } from "~/components/ui/label";
 
+// Tipos de estado e ação para o scanner
 interface ScannerState {
   isReady: boolean;
   isScanning: boolean;
   hasPermission: boolean;
   error?: string;
 }
+
+type ScannerAction =
+  | { type: "INITIALIZE_SUCCESS"; hasPermission: boolean }
+  | { type: "INITIALIZE_ERROR"; error: string }
+  | { type: "TOGGLE_SCAN"; isScanning: boolean }
+  | { type: "REFRESH" };
 
 interface FiscalFilters {
   date: string;
@@ -43,17 +56,50 @@ export function meta() {
   ];
 }
 
+// Reducer para gerenciar o estado do scanner
+const scannerReducer = (
+  state: ScannerState,
+  action: ScannerAction
+): ScannerState => {
+  switch (action.type) {
+    case "INITIALIZE_SUCCESS":
+      return {
+        ...state,
+        isReady: true,
+        isScanning: action.hasPermission,
+        hasPermission: action.hasPermission,
+        error: undefined,
+      };
+    case "INITIALIZE_ERROR":
+      return {
+        ...state,
+        isReady: true,
+        isScanning: false,
+        hasPermission: false,
+        error: action.error,
+      };
+    case "TOGGLE_SCAN":
+      return { ...state, isScanning: action.isScanning };
+    case "REFRESH":
+      return { ...state, isScanning: state.hasPermission, error: undefined };
+    default:
+      return state;
+  }
+};
+
 export default function Qr() {
   const scannerRef = useRef<QrScanner | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const qrBoxRef = useRef<HTMLDivElement>(null);
   const [autoCloseDialog, setAutoCloseDialog] = useState(true);
 
-  const [scannerState, setScannerState] = useState<ScannerState>({
+  const initialState: ScannerState = {
     isReady: false,
     isScanning: false,
-    hasPermission: true,
-  });
+    hasPermission: false,
+  };
+
+  const [scannerState, dispatch] = useReducer(scannerReducer, initialState);
   const dates = useMemo(() => generateRestrictedDates(), []);
   const [lastScanResult, setLastScanResult] = useState<string>("");
 
@@ -75,7 +121,6 @@ export default function Qr() {
     willEnter: "sim",
   });
 
-  // Lógica de dados agora vem do hook, que é alimentado pelos filtros
   const { presences, forecastMap, confirmPresence, removePresence } =
     usePresenceManagement(filters);
 
@@ -83,33 +128,23 @@ export default function Qr() {
     let isCancelled = false;
 
     const startScanner = async () => {
-      if (!videoRef.current || scannerRef.current) return;
+      if (!videoRef.current) return;
 
       try {
-        const hasPermission = await navigator.mediaDevices
-          .getUserMedia({ video: { facingMode: { ideal: "environment" } } })
-          .then((stream) => {
-            stream.getTracks().forEach((t) => t.stop());
-            return true;
-          })
-          .catch(() => false);
-
+        const hasPermission = await QrScanner.hasCamera();
         if (!hasPermission) {
           if (!isCancelled) {
-            setScannerState((s) => ({
-              ...s,
-              hasPermission: false,
-              isReady: true,
-            }));
+            dispatch({
+              type: "INITIALIZE_ERROR",
+              error: "Permissão da câmera não concedida.",
+            });
           }
           return;
         }
 
-        scannerRef.current = new QrScanner(
+        const scanner = new QrScanner(
           videoRef.current,
-          (result) => {
-            onScanSuccess(result);
-          },
+          (result) => onScanSuccess(result),
           {
             onDecodeError: onScanFail,
             preferredCamera: "environment",
@@ -118,23 +153,20 @@ export default function Qr() {
             overlay: qrBoxRef.current ?? undefined,
           }
         );
+        scannerRef.current = scanner;
 
-        await scannerRef.current.start();
+        await scanner.start();
         if (!isCancelled) {
-          setScannerState({
-            isReady: true,
-            isScanning: true,
-            hasPermission: true,
-          });
+          dispatch({ type: "INITIALIZE_SUCCESS", hasPermission: true });
         }
       } catch (err: any) {
         console.error("Erro ao iniciar o scanner:", err);
         if (!isCancelled) {
-          setScannerState({
-            isReady: true,
-            isScanning: false,
-            hasPermission: false,
-            error: String(err?.message ?? err),
+          dispatch({
+            type: "INITIALIZE_ERROR",
+            error: String(
+              err?.message ?? "Erro desconhecido ao iniciar a câmera."
+            ),
           });
         }
       }
@@ -145,30 +177,26 @@ export default function Qr() {
     return () => {
       isCancelled = true;
       scannerRef.current?.stop();
-      scannerRef.current?.destroy?.();
+      scannerRef.current?.destroy();
       scannerRef.current = null;
     };
   }, []);
 
   const onScanSuccess = async (result: QrScanner.ScanResult) => {
     const uuid = (result?.data || "").trim();
-    if (!uuid) return;
+    if (!uuid || uuid === lastScanResult) return;
 
-    const {
-      date: currentDate,
-      meal: currentMeal,
-      unit: currentUnit,
-    } = currentFiltersRef.current;
     setLastScanResult(uuid);
+    const { date, meal, unit } = currentFiltersRef.current;
 
     try {
       const { data: previsao } = await supabase
         .from("rancho_previsoes")
         .select("vai_comer")
         .eq("user_id", uuid)
-        .eq("data", currentDate)
-        .eq("refeicao", currentMeal)
-        .eq("unidade", currentUnit)
+        .eq("data", date)
+        .eq("refeicao", meal)
+        .eq("unidade", unit)
         .maybeSingle();
 
       setDialog({
@@ -184,31 +212,34 @@ export default function Qr() {
   };
 
   const onScanFail = (err: string | Error) => {
-    console.warn("QR Error:", err);
+    if (String(err) !== "No QR code found") {
+      console.warn("QR Scan Error:", err);
+    }
   };
 
-  // Função "orquestradora" que usa a lógica do hook
-  const handleConfirmDialog = async () => {
+  const handleConfirmDialog = useCallback(async () => {
     if (!dialog.uuid) return;
 
     try {
       await confirmPresence(dialog.uuid, dialog.willEnter === "sim");
     } catch (err) {
       console.error("Falha ao confirmar presença:", err);
-      // O hook já exibe um toast de erro, não precisa de outro aqui
     } finally {
-      setDialog((d) => ({ ...d, open: false }));
+      setDialog((d) => ({ ...d, open: false, uuid: null }));
     }
-  };
+  }, [dialog.uuid, dialog.willEnter, confirmPresence]);
+
   const toggleScan = useCallback(async () => {
-    if (!scannerRef.current) return;
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+
     try {
       if (scannerState.isScanning) {
-        await scannerRef.current.stop();
-        setScannerState((s) => ({ ...s, isScanning: false }));
+        scanner.stop();
+        dispatch({ type: "TOGGLE_SCAN", isScanning: false });
       } else {
-        await scannerRef.current.start();
-        setScannerState((s) => ({ ...s, isScanning: true }));
+        await scanner.start();
+        dispatch({ type: "TOGGLE_SCAN", isScanning: true });
       }
     } catch (err) {
       console.error("Erro ao alternar scanner:", err);
@@ -216,33 +247,21 @@ export default function Qr() {
   }, [scannerState.isScanning]);
 
   const refresh = useCallback(async () => {
-    try {
-      await scannerRef.current?.stop();
-    } catch {}
-    try {
-      await scannerRef.current?.start();
-      setScannerState((s) => ({ ...s, isScanning: true, isReady: true }));
-    } catch (err) {
-      console.error("Erro ao atualizar scanner:", err);
+    if (scannerRef.current) {
+      await scannerRef.current.start();
+      dispatch({ type: "REFRESH" });
     }
   }, []);
 
   useEffect(() => {
-    // Se o diálogo não está aberto ou a opção está desligada, não faz nada.
     if (!dialog.open || !autoCloseDialog) return;
 
-    // Define um timer para fechar o diálogo após 3 segundos (3000 ms)
     const timerId = setTimeout(() => {
       handleConfirmDialog();
-      setDialog((d) => ({ ...d, open: false }));
     }, 3000);
 
-    // Função de limpeza: será executada se o diálogo for fechado antes do tempo
-    // ou se o componente for desmontado.
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [dialog.open, autoCloseDialog]);
+    return () => clearTimeout(timerId);
+  }, [dialog.open, autoCloseDialog, handleConfirmDialog]);
 
   const clearResult = useCallback(() => setLastScanResult(""), []);
 
@@ -258,20 +277,22 @@ export default function Qr() {
 
   return (
     <div className="space-y-6">
-      {/* Filtros de fiscalização */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
         <Filters
-          // Passa o objeto de filtros e as funções de atualização
           selectedDate={filters.date}
-          setSelectedDate={(v) => setFilters((f) => ({ ...f, date: v }))}
+          setSelectedDate={(newDate: string) =>
+            setFilters((f) => ({ ...f, date: newDate }))
+          }
           selectedMeal={filters.meal}
-          setSelectedMeal={(v) => setFilters((f) => ({ ...f, meal: v }))}
+          setSelectedMeal={(newMeal: MealKey) =>
+            setFilters((f) => ({ ...f, meal: newMeal }))
+          }
           selectedUnit={filters.unit}
-          setSelectedUnit={(v) => setFilters((f) => ({ ...f, unit: v }))}
+          setSelectedUnit={(newUnit: string) =>
+            setFilters((f) => ({ ...f, unit: newUnit }))
+          }
           dates={dates}
         />
-        <div className="flex items-center space-x-2"></div>
-        {/* Ações do scanner */}
         <div className="flex items-center gap-2">
           <Switch
             id="autoClose"
@@ -281,29 +302,43 @@ export default function Qr() {
           <Label htmlFor="autoClose">
             {autoCloseDialog ? "Fechar Auto." : "Fechar Manual"}
           </Label>
-          <Button variant="outline" size="sm" onClick={actions.toggleScan}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={actions.toggleScan}
+            disabled={!scannerState.hasPermission}
+          >
             <Camera className="h-4 w-4 mr-2" />
-            {scannerState.isScanning ? "Pausar" : "Iniciar"}
+            {scannerState.isScanning ? "Pausar" : "Ler"}
           </Button>
-          <Button variant="outline" size="sm" onClick={actions.refresh}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={actions.refresh}
+            disabled={!scannerState.hasPermission}
+          >
             <RefreshCw
               className={`h-4 w-4 ${scannerState.isScanning ? "animate-spin" : ""}`}
             />
           </Button>
           {lastScanResult && (
             <Button variant="secondary" size="sm" onClick={actions.clearResult}>
-              Limpar último
+              Limpar
             </Button>
           )}
         </div>
       </div>
 
-      {/* Leitor de QR */}
       <div className="qr-reader relative">
         <video
           ref={videoRef}
           className="rounded-md w-full max-h-[60vh] object-cover"
         />
+        {!scannerState.hasPermission && scannerState.isReady && (
+          <div className="text-center p-4 border rounded-md bg-destructive/10 text-destructive">
+            <p>{scannerState.error || "Acesso à câmera negado."}</p>
+          </div>
+        )}
         <div ref={qrBoxRef} className="qr-box pointer-events-none" />
         {lastScanResult && (
           <p className="absolute top-2 left-2 z-50 text-white bg-black/60 rounded px-2 py-1">
@@ -319,7 +354,7 @@ export default function Qr() {
         actions={actions}
       />
       <FiscalDialog
-        setDialog={(v) => setDialog(v)}
+        setDialog={setDialog}
         dialog={dialog}
         confirmDialog={handleConfirmDialog}
         selectedUnit={filters.unit}
