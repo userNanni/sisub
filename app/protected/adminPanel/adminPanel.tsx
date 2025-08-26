@@ -1,3 +1,12 @@
+import { Route } from "./+types/adminPanel";
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Painel Admin" },
+    { name: "description", content: "Controle o sua unidade" },
+  ];
+}
+
 export default function AdminPanel() {
   return (
     <div className="w-full p-4 flex flex-col justify-center">

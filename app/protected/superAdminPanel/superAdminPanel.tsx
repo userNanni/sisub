@@ -64,6 +64,7 @@ import {
 // Importe seu cliente Supabase e tipos
 import supabase from "@/utils/supabase";
 import { userLevelType } from "@/auth/auth"; // Assumindo que o tipo está aqui
+import { Route } from "./+types/superAdminPanel";
 
 // Definição do tipo para os dados da tabela profiles_admin
 export type ProfileAdmin = {
@@ -75,6 +76,13 @@ export type ProfileAdmin = {
   created_at: string;
   updated_at: string;
 };
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Painel SuperAdmin" },
+    { name: "description", content: "Controle o Sistema" },
+  ];
+}
 
 export default function SuperAdminPanel() {
   const [profiles, setProfiles] = React.useState<ProfileAdmin[]>([]);

@@ -10,6 +10,7 @@ import {
   useChangelog,
   ChangelogEntry,
 } from "@/components/hooks/useChangeLogData";
+import { Route } from "./+types/changelog";
 
 // Mantido no escopo do componente de view
 const TAG_STYLES: Record<string, string> = {
@@ -46,6 +47,13 @@ function getGithubRepoUrl() {
   } catch {
     return DEFAULT_GITHUB_REPO_URL;
   }
+}
+
+export function meta({}: Route.MetaArgs) {
+  return [
+    { title: "Lista de Atualizações" },
+    { name: "description", content: "Veja o que mudou no sistema" },
+  ];
 }
 
 // Opcional: bloqueia protocolos perigosos em links na renderização do markdown

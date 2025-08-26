@@ -52,7 +52,7 @@ const ICONS: Record<IconName, (props: { className?: string }) => JSX.Element> =
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Tutorial | SISUB" },
+    { title: "Tutorial SISUB" },
     {
       name: "description",
       content:
