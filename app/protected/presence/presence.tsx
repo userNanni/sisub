@@ -56,6 +56,20 @@ export function meta() {
   ];
 }
 
+// Garante que os valores retornados existem em MealKey:
+// 'cafe' | 'almoco' | 'jantar' | 'ceia'
+export function inferDefaultMeal(now: Date = new Date()): MealKey {
+  const toMin = (h: number, m = 0) => h * 60 + m;
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const inRange = (start: number, end: number) =>
+    minutes >= start && minutes < end;
+
+  if (inRange(toMin(4), toMin(9))) return "cafe";
+  if (inRange(toMin(9), toMin(15))) return "almoco";
+  if (inRange(toMin(15), toMin(20))) return "janta";
+  return "ceia"; // cobre 20:00–24:00 e 00:00–04:00
+}
+
 // Reducer para gerenciar o estado do scanner
 const scannerReducer = (
   state: ScannerState,
@@ -93,6 +107,34 @@ export default function Qr() {
   const qrBoxRef = useRef<HTMLDivElement>(null);
   const [autoCloseDialog, setAutoCloseDialog] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const dates = useMemo(() => generateRestrictedDates(), []);
+  const defaultMeal = useMemo(() => inferDefaultMeal(), []);
+
+  const [filters, setFilters] = useState<FiscalFilters>({
+    date: dates[1],
+    meal: defaultMeal,
+    unit: "DIRAD - DIRAD",
+  });
+
+  // 2) Cooldown + cache de UUIDs (LRU simples)
+  const COOLDOWN_MS = 800;
+  const MAX_CACHE = 300;
+  const lastScanAtRef = useRef(0);
+  const recentlyScannedRef = useRef<Set<string>>(new Set());
+  const scannedQueueRef = useRef<string[]>([]); // LRU
+
+  const markScanned = (uuid: string) => {
+    const set = recentlyScannedRef.current;
+    const queue = scannedQueueRef.current;
+    if (!set.has(uuid)) {
+      set.add(uuid);
+      queue.push(uuid);
+      if (queue.length > MAX_CACHE) {
+        const oldest = queue.shift();
+        if (oldest) set.delete(oldest);
+      }
+    }
+  };
 
   const initialState: ScannerState = {
     isReady: false,
@@ -101,14 +143,7 @@ export default function Qr() {
   };
 
   const [scannerState, dispatch] = useReducer(scannerReducer, initialState);
-  const dates = useMemo(() => generateRestrictedDates(), []);
   const [lastScanResult, setLastScanResult] = useState<string>("");
-
-  const [filters, setFilters] = useState<FiscalFilters>({
-    date: dates[1],
-    meal: "almoco",
-    unit: "DIRAD - DIRAD",
-  });
 
   const currentFiltersRef = useRef(filters);
   useEffect(() => {
@@ -183,11 +218,24 @@ export default function Qr() {
     };
   }, []);
 
+  // 2) Antirreentrância + cooldown + cache + pausa do scanner durante o processamento
   const onScanSuccess = async (result: QrScanner.ScanResult) => {
     const uuid = (result?.data || "").trim();
-    if (!uuid || uuid === lastScanResult) return;
+    if (!uuid) return;
 
-    setLastScanResult(uuid);
+    const now = Date.now();
+    if (now - lastScanAtRef.current < COOLDOWN_MS) return;
+    if (recentlyScannedRef.current.has(uuid)) return;
+    if (isProcessing) return;
+
+    lastScanAtRef.current = now;
+    setIsProcessing(true);
+
+    // Pausa imediatamente para reduzir carga até abrir diálogo
+    try {
+      await scannerRef.current?.stop();
+    } catch {}
+
     const { date, meal, unit } = currentFiltersRef.current;
 
     try {
@@ -200,16 +248,22 @@ export default function Qr() {
         .eq("unidade", unit)
         .maybeSingle();
 
+      setLastScanResult(uuid);
       setDialog({
         open: true,
         uuid,
         systemForecast: previsao ? !!previsao.vai_comer : null,
         willEnter: "sim",
       });
+
+      // Marca UUID como processado recentemente (cache LRU)
+      markScanned(uuid);
     } catch (err) {
       console.error("Erro ao preparar diálogo:", err);
       toast.error("Erro", { description: "Falha ao processar QR." });
     } finally {
+      setIsProcessing(false);
+      // O efeito de dialog.open controla start/stop automaticamente (alteração 1)
     }
   };
 
@@ -228,6 +282,7 @@ export default function Qr() {
       console.error("Falha ao confirmar presença:", err);
     } finally {
       setDialog((d) => ({ ...d, open: false, uuid: null }));
+      // Scanner será retomado pelo efeito de dialog.open (alteração 1)
     }
   }, [dialog.uuid, dialog.willEnter, confirmPresence]);
 
@@ -237,7 +292,7 @@ export default function Qr() {
 
     try {
       if (scannerState.isScanning) {
-        scanner.stop();
+        await scanner.stop();
         dispatch({ type: "TOGGLE_SCAN", isScanning: false });
       } else {
         await scanner.start();
@@ -248,22 +303,45 @@ export default function Qr() {
     }
   }, [scannerState.isScanning]);
 
+  // 5) Refresh com stop antes de start + tratamento de erros
   const refresh = useCallback(async () => {
-    if (scannerRef.current) {
-      await scannerRef.current.start();
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    try {
+      await scanner.stop();
+    } catch {}
+    try {
+      await scanner.start();
       dispatch({ type: "REFRESH" });
+    } catch (err) {
+      console.error("Erro no refresh do scanner:", err);
     }
   }, []);
 
+  // 3) Auto-fechamento reseta por UUID
   useEffect(() => {
-    if (!dialog.open || !autoCloseDialog) return;
+    if (!dialog.open || !autoCloseDialog || !dialog.uuid) return;
 
     const timerId = setTimeout(() => {
       handleConfirmDialog();
     }, 3000);
 
     return () => clearTimeout(timerId);
-  }, [dialog.open, autoCloseDialog, handleConfirmDialog]);
+  }, [dialog.open, dialog.uuid, autoCloseDialog, handleConfirmDialog]);
+
+  // 1) Pausar scanner quando o diálogo está aberto e retomar quando fechar
+  useEffect(() => {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+
+    if (dialog.open) {
+      scanner.stop();
+    } else if (scannerState.hasPermission) {
+      scanner.start().catch((err) => {
+        console.error("Erro ao iniciar scanner:", err);
+      });
+    }
+  }, [dialog.open, scannerState.hasPermission]);
 
   const clearResult = useCallback(() => setLastScanResult(""), []);
 
