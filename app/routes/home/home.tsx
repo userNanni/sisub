@@ -309,10 +309,11 @@ export default function Home() {
             Faça parte da modernização do SISUB. Acesse agora e comece a
             planejar suas refeições de forma inteligente.
           </p>
-
-          <button className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg font-semibold rounded-lg transition-all duration-150 transform hover:scale-105 shadow-lg hover:shadow-xl mb-8">
-            Fazer Login →
-          </button>
+          <Link to="/login">
+            <button className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg font-semibold rounded-lg transition-all duration-150 transform hover:scale-105 shadow-lg hover:shadow-xl mb-8 cursor-pointer">
+              Fazer Login →
+            </button>
+          </Link>
 
           <div className="flex flex-wrap justify-center items-center gap-6 text-blue-200">
             <div className="flex items-center space-x-2">
@@ -332,7 +333,7 @@ export default function Home() {
       </div>
 
       {/* Footer simples */}
-      {Footer()}
+      <Footer />
     </div>
   );
 }
