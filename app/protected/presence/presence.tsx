@@ -4,7 +4,7 @@ import {
   useRef,
   useState,
   useCallback,
-  useReducer, // Importação correta do useReducer
+  useReducer,
 } from "react";
 import QrScanner from "qr-scanner";
 import supabase from "@/utils/supabase";
@@ -187,7 +187,6 @@ export default function Qr() {
     const uuid = (result?.data || "").trim();
     if (!uuid || uuid === lastScanResult) return;
 
-    setIsProcessing(true);
     setLastScanResult(uuid);
     const { date, meal, unit } = currentFiltersRef.current;
 
@@ -211,7 +210,6 @@ export default function Qr() {
       console.error("Erro ao preparar diálogo:", err);
       toast.error("Erro", { description: "Falha ao processar QR." });
     } finally {
-      setIsProcessing(false);
     }
   };
 

@@ -136,8 +136,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       document.cookie.split(";").forEach((c) => {
         const eqPos = c.indexOf("=");
         const name = eqPos > -1 ? c.substr(0, eqPos) : c;
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+        document.cookie =
+          name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        document.cookie =
+          name +
+          "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" +
+          window.location.hostname;
       });
 
       // Clear localStorage
@@ -279,11 +283,59 @@ export const useUserInfo = () => {
   // You can extract role from user metadata if stored there
   const userRole = user?.user_metadata?.role || "user";
 
-  return { 
-    user, 
-    userRole: userRole as "admin" | "user", 
+  return {
+    user,
+    userRole: userRole as "admin" | "user",
     isLoading,
     email: user?.email,
-    id: user?.id
+    id: user?.id,
   };
 };
+export type userLevelType = "user" | "admin" | "superadmin" | null;
+
+/**
+ * Verifica o nível de permissão de um usuário.
+ * Se o usuário estiver na tabela 'profiles_admin' com a role 'admin' ou 'superadmin', retorna essa role.
+ * Caso contrário, ou se não for encontrado, retorna 'user'.
+ * Retorna 'null' se o userId não for fornecido ou em caso de erro na consulta.
+ */
+export async function checkUserLevel(
+  userId: string | null | undefined
+): Promise<userLevelType> {
+  // 1. Se não houver userId, não podemos determinar o nível.
+  if (!userId) {
+    return null;
+  }
+
+  try {
+    // 2. Faz a consulta ao Supabase para buscar a role do usuário.
+    const { data, error } = await supabase
+      .from("profiles_admin")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    // 3. Em caso de erro na consulta, exibe no console e retorna null.
+    if (error) {
+      console.error("Erro ao verificar o nível de admin:", error);
+      return null;
+    }
+
+    // 4. Se a consulta não retornar dados, significa que o usuário não tem uma role
+    // superior, então ele é um usuário comum.
+    if (!data) {
+      return "user";
+    }
+
+    // 5. Se a role for 'admin' ou 'superadmin', retorna o nível correspondente.
+    // Caso contrário, por segurança, trata como um usuário comum.
+    if (data.role === "admin" || data.role === "superadmin") {
+      return data.role;
+    } else {
+      return "user";
+    }
+  } catch (e) {
+    console.error("Erro inesperado ao verificar o nível do usuário:", e);
+    return null; // Retorna null para qualquer erro não esperado.
+  }
+}

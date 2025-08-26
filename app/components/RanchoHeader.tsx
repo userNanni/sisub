@@ -18,10 +18,15 @@ import {
   ScanQrCode,
 } from "lucide-react";
 import { useState, useEffect, useMemo, type JSX } from "react";
-import type { AuthContextType } from "~/auth/auth";
+import {
+  checkUserLevel,
+  userLevelType,
+  type AuthContextType,
+} from "~/auth/auth";
 import { QRCodeCanvas } from "qrcode.react";
 import { useLocation, useNavigate } from "react-router-dom";
 import supabase from "@/utils/supabase"; // novo import
+import RouteSelector from "./routeSelector";
 
 interface RanchoHeaderProps {
   user: AuthContextType["user"];
@@ -30,62 +35,25 @@ interface RanchoHeaderProps {
 
 export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
   const [isClient, setIsClient] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false); // novo estado
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+  const [userLevel, setUserLevel] = useState<userLevelType>(null);
 
-  // Verifica se o usuário é admin (existe em profiles_admin)
   useEffect(() => {
-    let cancelled = false;
-
-    const checkAdmin = async () => {
-      if (!user?.id) {
-        if (!cancelled) setIsAdmin(false);
-        return;
+    const fetchUserLevel = async () => {
+      if (user?.id) {
+        const level = await checkUserLevel(user.id);
+        setUserLevel(level);
       }
-
-      const { data, error } = await supabase
-        .from("profiles_admin")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (error) {
-        console.error("Erro ao verificar admin:", error);
-        setIsAdmin(false);
-        return;
-      }
-
-      setIsAdmin(!!data);
     };
-
-    checkAdmin();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+    fetchUserLevel();
+  }, [user]);
 
   // Detecta a rota atual
-  const isOnRancho = location.pathname.startsWith("/rancho");
-
-  // Botão toggle Previsão <-> Fiscal
-  const toggleTarget = useMemo(
-    () => (isOnRancho ? "/fiscal" : "/rancho"),
-    [isOnRancho]
-  );
-  const toggleLabel = useMemo(
-    () => (isOnRancho ? "Fiscal" : "Previsão"),
-    [isOnRancho]
-  );
-  const ToggleIcon = isOnRancho ? ScanQrCode : Calendar;
-
-  const handleToggle = () => navigate(toggleTarget);
 
   // Tamanho do QR Code baseado na tela
   const getQRSize = () => {
@@ -115,20 +83,7 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
           {/* Ações do usuário */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Toggle entre Previsão e Fiscal (somente admins) */}
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleToggle}
-                className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 shadow-sm cursor-pointer"
-              >
-                <ToggleIcon className="h-4 w-4" />
-                {isClient && window.innerWidth >= 640 && (
-                  <span className="font-medium">{toggleLabel}</span>
-                )}
-              </Button>
-            )}
-
+            <RouteSelector userLevel={userLevel} />
             {/* Info do usuário */}
             <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-700 bg-gray-50 px-3 py-2 rounded-full border">
               <div className="p-1 bg-white rounded-full">
@@ -138,7 +93,6 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
                 {user?.email}
               </span>
             </div>
-
             {/* Dialog do QR do usuário */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -211,7 +165,6 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
                 </div>
               </AlertDialogContent>
             </AlertDialog>
-
             {/* Sair */}
             <Button
               variant="outline"

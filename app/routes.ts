@@ -2,6 +2,8 @@ import { type RouteConfig, index, layout, route } from "@react-router/dev/routes
 
 export default [
   index("routes/home/home.tsx"),
+  route("changelog", "routes/home/changelog.tsx"), 
+  route("tutorial", "routes/home/tutorial.tsx"), 
 
     layout("./auth/layout.tsx", [
       route("login", "./auth/login.tsx"),
@@ -10,7 +12,12 @@ export default [
 
     layout("./protected/layout.tsx", [
       route("rancho", "./protected/home/rancho.tsx"),
-      route("fiscal", "./protected/fiscal/fiscal.tsx"),
+      layout("./protected/presence/layout.tsx", [
+        route("fiscal", "./protected/presence/presence.tsx"),
+      ]),
+      layout("./protected/superAdminPanel/layout.tsx", [
+        route("superadmin", "./protected/superAdminPanel/superAdminPanel.tsx"),
+      ]),
     ]),
 
     // Nova rota API para Power BI

@@ -5,6 +5,9 @@ export default function Footer() {
         <p className="text-gray-400">
           © 2025 Sistema de Subsistência. Todos os direitos reservados.
         </p>
+        <p className="text-gray-500 text-sm">
+          Desenvolvido por Ten Nanni (IEFA) e Ten Bruno (GAP-MN)
+        </p>
       </div>
     </footer>
   );

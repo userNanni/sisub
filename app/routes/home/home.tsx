@@ -20,6 +20,8 @@ export default function Home() {
     meals: false,
     features: false,
     cta: false,
+    changelog: false,
+    tutorial: false,
   });
 
   useEffect(() => {
@@ -192,6 +194,106 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Tutorial + Changelog lado a lado */}
+      <div id="learn" className="container mx-auto px-4 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+          {/* Card: Tutorial */}
+          <section
+            id="tutorial"
+            className={`transition-all duration-500 ${
+              isVisible.tutorial
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-10"
+            }`}
+          >
+            <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-8 h-full flex flex-col text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 mx-auto mb-3">
+                📘 Tutorial
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                Guia do SISUB
+              </h2>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Aprenda passo a passo a preencher previsões e a fiscalizar com
+                QR no SISUB.
+              </p>
+
+              {/* Badges (opcional) */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+                <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border bg-blue-50 text-blue-800 border-blue-200">
+                  usuário
+                </span>
+                <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border bg-green-50 text-green-800 border-green-200">
+                  fiscal
+                </span>
+                <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border bg-purple-50 text-purple-800 border-purple-200">
+                  passo a passo
+                </span>
+              </div>
+
+              <div className="mt-auto">
+                <Link
+                  to="/tutorial"
+                  aria-label="Ver o Tutorial completo"
+                  className="inline-flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700 px-6 py-3 font-semibold rounded-lg transition-all duration-150 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  Ver Tutorial →
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Card: Changelog */}
+          <section
+            id="changelog"
+            className={`transition-all duration-500 delay-100 ${
+              isVisible.changelog
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-10"
+            }`}
+          >
+            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-8 h-full flex flex-col text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-blue-50 text-blue-700 border border-blue-200 mx-auto mb-3">
+                🗒️ Novidades
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                Novidades do SISUB
+              </h2>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Acompanhe as melhorias, correções e novas funcionalidades em
+                tempo real.
+              </p>
+
+              {/* Badges ilustrativas (opcional) */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+                <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border bg-green-50 text-green-800 border-green-200">
+                  feat
+                </span>
+                <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border bg-red-50 text-red-800 border-red-200">
+                  fix
+                </span>
+                <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border bg-indigo-50 text-indigo-800 border-indigo-200">
+                  docs
+                </span>
+                <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800 border-yellow-200">
+                  perf
+                </span>
+              </div>
+
+              <div className="mt-auto">
+                <Link
+                  to="/changelog"
+                  aria-label="Ver o Changelog completo"
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-6 py-3 font-semibold rounded-lg transition-all duration-150 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  Ver Changelog →
+                </Link>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
       {/* CTA Final */}
       <div
         id="cta"
@@ -234,4 +336,3 @@ export default function Home() {
     </div>
   );
 }
-
