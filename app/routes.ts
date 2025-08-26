@@ -18,6 +18,7 @@ export default [
       layout("./protected/superAdminPanel/layout.tsx", [
         route("superadmin", "./protected/superAdminPanel/superAdminPanel.tsx"),
       ]),
+      route("admin", "./protected/adminPanel/adminPanel.tsx"),
     ]),
 
     // Nova rota API para Power BI

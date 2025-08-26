@@ -298,7 +298,7 @@ export default function SuperAdminPanel() {
 
   // JSX do componente
   return (
-    <div className="w-full p-4">
+    <div className="w-full p-4 flex flex-col justify-center">
       {/* Header com Filtro e Botões */}
       <div className="flex items-center py-4">
         <Input
@@ -510,6 +510,12 @@ export default function SuperAdminPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <iframe
+        title="Sistema_sisub_FINALFINAL"
+        height="600"
+        src="https://app.powerbi.com/view?r=eyJrIjoiNGY4ZTI2YTktYTg1NC00NDgyLWIyYTItNWI4ZTIzYTgxZTNiIiwidCI6ImViMjk0Zjg5LTUwNWUtNDI4MC1iYjdiLTFlMzlhZjg5YTg4YyJ9"
+        allowFullScreen
+      ></iframe>
     </div>
   );
 }
