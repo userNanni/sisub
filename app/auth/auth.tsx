@@ -324,15 +324,19 @@ export async function checkUserLevel(
     // 4. Se a consulta não retornar dados, significa que o usuário não tem uma role
     // superior, então ele é um usuário comum.
     if (!data) {
-      return "user";
+      return null;
     }
 
     // 5. Se a role for 'admin' ou 'superadmin', retorna o nível correspondente.
     // Caso contrário, por segurança, trata como um usuário comum.
-    if (data.role === "admin" || data.role === "superadmin") {
+    if (
+      data.role === "admin" ||
+      data.role === "superadmin" ||
+      data.role === "user"
+    ) {
       return data.role;
     } else {
-      return "user";
+      return null;
     }
   } catch (e) {
     console.error("Erro inesperado ao verificar o nível do usuário:", e);

@@ -4,7 +4,7 @@
 
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calendar, ScanQrCode, ChevronsUpDown } from "lucide-react";
+import { Calendar, ScanQrCode } from "lucide-react";
 
 // Importações dos componentes ShadCN UI
 import { Button } from "@/components/ui/button";
@@ -67,7 +67,7 @@ export default function RouteSelector({ userLevel }: RouteSelectorProps) {
     if (currentPath.startsWith("/fiscal")) return "fiscal";
     if (currentPath.startsWith("/admin")) return "admin";
     if (currentPath.startsWith("/superadmin")) return "superadmin";
-    return ""; // Retorno padrão
+    return "";
   };
 
   const currentView = getCurrentView();
@@ -80,12 +80,10 @@ export default function RouteSelector({ userLevel }: RouteSelectorProps) {
     }
   };
 
-  // Se não houver nível de usuário, não renderiza nada
   if (!userLevel) {
     return null;
   }
 
-  // Renderização para o nível "user" (Botão Toggle)
   if (userLevel === "user") {
     const isOnRancho = currentView === "previsao";
     const toggleTarget = isOnRancho ? "/fiscal" : "/rancho";
