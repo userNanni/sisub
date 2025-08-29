@@ -8,6 +8,7 @@ export default [
     layout("./auth/layout.tsx", [
       route("login", "./auth/login.tsx"),
       route("register", "./auth/register.tsx"),
+      route("/auth/reset-password", "./auth/resetPassword.tsx"),
     ]),
 
     layout("./protected/layout.tsx", [

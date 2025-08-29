@@ -1,9 +1,16 @@
-import { Outlet, Navigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./auth";
 
 export default function AuthLayout() {
   const { user } = useAuth();
-  if (user) {
+
+  const location = useLocation();
+
+  const isResetPasswordRoute = location.pathname.startsWith(
+    "/auth/reset-password"
+  );
+
+  if (user && !isResetPasswordRoute) {
     return <Navigate to="/rancho" replace />;
   }
 
@@ -11,7 +18,9 @@ export default function AuthLayout() {
     <div className="h-full bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center">
-          <h1 className="text-7xl md:text-8xl font-black text-blue-600 block k2d-extrabold">SISUB</h1>
+          <h1 className="text-7xl md:text-8xl font-black text-blue-600 block k2d-extrabold">
+            SISUB
+          </h1>
           <p className="text-gray-600">Gerencie a demanda do rancho</p>
         </div>
       </div>
