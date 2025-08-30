@@ -21,7 +21,7 @@ import {
   MoreHorizontal,
   PlusCircle,
 } from "lucide-react";
-import { toast } from "sonner"; // Importação do Sonner
+import { toast } from "sonner";
 
 // Importações dos componentes ShadCN UI
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// AlertDialog para confirmar exclusão
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 // Importe seu cliente Supabase e tipos
 import supabase from "@/utils/supabase";
 import { userLevelType } from "@/auth/auth"; // Assumindo que o tipo está aqui
@@ -95,7 +108,12 @@ export default function SuperAdminPanel() {
     React.useState<ProfileAdmin | null>(null);
 
   // State para os formulários
+  const [newUserId, setNewUserId] = React.useState("");
   const [newUserEmail, setNewUserEmail] = React.useState("");
+  const [newUserName, setNewUserName] = React.useState("");
+  const [newUserSaram, setNewUserSaram] = React.useState("");
+  const [newUserRole, setNewUserRole] = React.useState<userLevelType>(null);
+
   const [editSaram, setEditSaram] = React.useState("");
   const [editRole, setEditRole] = React.useState<userLevelType>(null);
 
@@ -120,45 +138,71 @@ export default function SuperAdminPanel() {
     fetchProfiles();
   }, []);
 
-  // Handler para adicionar um novo usuário via Edge Function
+  // Handler para adicionar um novo usuário direto na tabela (exigindo todos os campos, incluindo ID do usuário admin)
   const handleAddUser = async () => {
-    if (!newUserEmail) {
+    const id = newUserId.trim();
+    const email = newUserEmail.trim().toLowerCase();
+    const name = newUserName.trim();
+    const saram = newUserSaram.trim();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!uuidRegex.test(id)) {
       toast.error("Erro de Validação", {
-        description: "O email não pode ser vazio.",
+        description: "ID inválido. Informe um UUID válido do usuário admin.",
+      });
+      return;
+    }
+    if (!emailRegex.test(email)) {
+      toast.error("Erro de Validação", { description: "Email inválido." });
+      return;
+    }
+    if (!name) {
+      toast.error("Erro de Validação", {
+        description: "O nome é obrigatório.",
+      });
+      return;
+    }
+    if (!/^\d{7}$/.test(saram)) {
+      toast.error("SARAM inválido", {
+        description: "O SARAM deve conter exatamente 7 números.",
+      });
+      return;
+    }
+    if (!newUserRole) {
+      toast.error("Erro de Validação", {
+        description: "Selecione uma role para o usuário.",
       });
       return;
     }
 
     try {
-      // Chama a Edge Function publicada no seu projeto Supabase
-      // Nome: "user-creation-with-email"
-      // URL direta (para referência): https://jgigqdpdjgnnuwajtayh.supabase.co/functions/v1/user-creation-with-email
-      const { data, error } = await supabase.functions.invoke(
-        "user-creation-with-email",
-        {
-          body: {
-            email: newUserEmail,
-            role: "user", // você pode trocar para um Select no modal se desejar
-          },
-        }
-      );
+      const { error } = await supabase
+        .from("profiles_admin")
+        .insert([{ id, email, name, saram, role: newUserRole }]);
 
-      if (error) {
-        throw new Error(error.message || "Falha ao adicionar usuário");
-      }
+      if (error) throw error;
 
-      // data deve conter { message, profile } conforme sua função
       toast.success("Sucesso!", {
-        description: `Usuário ${newUserEmail} adicionado.`,
+        description: `Usuário ${email} adicionado.`,
       });
+
+      // Limpa e fecha modal
+      setNewUserId("");
       setNewUserEmail("");
+      setNewUserName("");
+      setNewUserSaram("");
+      setNewUserRole(null);
       setIsAddUserOpen(false);
+
+      // Recarrega tabela
       fetchProfiles();
     } catch (err: any) {
       toast.error("Erro ao adicionar usuário", {
         description:
-          err?.message ??
-          "Verifique se o email existe no Auth ou tente novamente.",
+          err?.message ?? "Ocorreu um erro ao salvar. Tente novamente.",
       });
     }
   };
@@ -190,6 +234,30 @@ export default function SuperAdminPanel() {
       setIsEditUserOpen(false);
       setSelectedProfile(null);
       fetchProfiles();
+    }
+  };
+
+  // Handler para excluir um usuário
+  const handleDeleteUser = async (id: string, email?: string | null) => {
+    try {
+      const { error } = await supabase
+        .from("profiles_admin")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Registro excluído", {
+        description: email
+          ? `Usuário ${email} removido.`
+          : "Remoção concluída.",
+      });
+
+      fetchProfiles();
+    } catch (err: any) {
+      toast.error("Erro ao excluir", {
+        description: err?.message ?? "Não foi possível excluir o registro.",
+      });
     }
   };
 
@@ -269,6 +337,36 @@ export default function SuperAdminPanel() {
               >
                 Editar
               </DropdownMenuItem>
+
+              {/* Excluir com confirmação */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem className="text-destructive focus:text-destructive">
+                    Excluir
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir o registro do usuário{" "}
+                      <strong>{profile.email}</strong>? Esta ação não pode ser
+                      desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() =>
+                        handleDeleteUser(profile.id, profile.email)
+                      }
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -307,6 +405,13 @@ export default function SuperAdminPanel() {
   // JSX do componente
   return (
     <div className="w-full p-4 flex flex-col justify-center">
+      <iframe
+        title="Sistema_sisub_FINALFINAL"
+        height="600"
+        src="https://app.powerbi.com/view?r=eyJrIjoiNGY4ZTI2YTktYTg1NC00NDgyLWIyYTItNWI4ZTIzYTgxZTNiIiwidCI6ImViMjk0Zjg5LTUwNWUtNDI4MC1iYjdiLTFlMzlhZjg5YTg4YyJ9"
+        allowFullScreen
+      ></iframe>
+
       {/* Header com Filtro e Botões */}
       <div className="flex items-center py-4">
         <Input
@@ -329,11 +434,39 @@ export default function SuperAdminPanel() {
               <DialogHeader>
                 <DialogTitle>Adicionar Novo Usuário</DialogTitle>
                 <DialogDescription>
-                  Digite o email do usuário que você deseja adicionar. O sistema
-                  irá verificar se ele existe na base de autenticação.
+                  Preencha todos os campos para cadastrar o usuário em
+                  profiles_admin. O ID deve ser o UUID do usuário se tornará
+                  Admin.
                 </DialogDescription>
               </DialogHeader>
+
               <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="id" className="text-right">
+                    ID (UUID)
+                  </Label>
+                  <Input
+                    id="id"
+                    value={newUserId}
+                    onChange={(e) => setNewUserId(e.target.value)}
+                    className="col-span-3"
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Nome
+                  </Label>
+                  <Input
+                    id="name"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    className="col-span-3"
+                    placeholder="Nome completo"
+                  />
+                </div>
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="email" className="text-right">
                     Email
@@ -344,9 +477,48 @@ export default function SuperAdminPanel() {
                     onChange={(e) => setNewUserEmail(e.target.value)}
                     className="col-span-3"
                     placeholder="usuario@exemplo.com"
+                    type="email"
                   />
                 </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="saram" className="text-right">
+                    SARAM
+                  </Label>
+                  <Input
+                    id="saram"
+                    value={newUserSaram}
+                    onChange={(e) => setNewUserSaram(e.target.value)}
+                    className="col-span-3"
+                    maxLength={7}
+                    inputMode="numeric"
+                    pattern="\d{7}"
+                    placeholder="Apenas 7 números"
+                  />
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="role" className="text-right">
+                    Role
+                  </Label>
+                  <Select
+                    value={newUserRole || ""}
+                    onValueChange={(value) =>
+                      setNewUserRole(value as userLevelType)
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Selecione uma role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="superadmin">Superadmin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
               <DialogFooter>
                 <Button type="submit" onClick={handleAddUser}>
                   Adicionar
@@ -518,12 +690,6 @@ export default function SuperAdminPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <iframe
-        title="Sistema_sisub_FINALFINAL"
-        height="600"
-        src="https://app.powerbi.com/view?r=eyJrIjoiNGY4ZTI2YTktYTg1NC00NDgyLWIyYTItNWI4ZTIzYTgxZTNiIiwidCI6ImViMjk0Zjg5LTUwNWUtNDI4MC1iYjdiLTFlMzlhZjg5YTg4YyJ9"
-        allowFullScreen
-      ></iframe>
     </div>
   );
 }
