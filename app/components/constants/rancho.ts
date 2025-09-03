@@ -1,6 +1,7 @@
+
 import { Coffee, Utensils, Moon, Sun } from "lucide-react";
 
-export const FALLBACK_UNIDADES = [
+export const FALLBACK_RANCHOS = [
   {
     value: "GAP-RJ - HCA",
     label: "GAP-RJ - HCA"
@@ -275,6 +276,12 @@ export const FALLBACK_UNIDADES = [
   }
 
 ] as const;
+
+export const FALLBACK_UNIDADES: readonly { value: string; label: string }[] = Array.from(
+  new Set(
+    FALLBACK_RANCHOS.map((r) => r.value.split(" - ")[0].trim())
+  )
+).map((u) => ({ value: u, label: u }))
 
 export const MEAL_TYPES = [
   {

@@ -1,7 +1,7 @@
-// hooks/useUnidades.ts
+// hooks/useRancho.ts
 import { useState, useEffect } from 'react';
 import supabase from '@/utils/supabase'; // Ajuste o caminho para seu cliente supabase
-import { FALLBACK_UNIDADES } from '@/components/constants/rancho';
+import { FALLBACK_RANCHOS, FALLBACK_UNIDADES } from '@/components/constants/rancho';
 
 // Define o tipo para uma única unidade, para garantir a consistência
 export interface Unidade {
@@ -9,11 +9,12 @@ export interface Unidade {
   label: string;
 }
 
-export const useUnidades = () => {
+export const useRancho = () => {
   // Inicia o estado com a lista de fallback
-  const [unidades, setUnidades] = useState<readonly Unidade[]>(FALLBACK_UNIDADES);
+  const [ranchos, setRanchos] = useState<readonly Unidade[]>(FALLBACK_RANCHOS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unidades, setUnidades] = useState<readonly Unidade[]>(FALLBACK_UNIDADES);
 
   useEffect(() => {
     const fetchUnidades = async () => {
@@ -35,7 +36,7 @@ export const useUnidades = () => {
         // Se a busca retornar dados, atualiza o estado.
         // Se não, o estado continua com o fallback.
         if (data && data.length > 0) {
-          setUnidades(data);
+          setRanchos(data);
         }
 
       } catch (err) {
@@ -50,5 +51,5 @@ export const useUnidades = () => {
     fetchUnidades();
   }, []); 
 
-  return { unidades, isLoading, error };
+  return { ranchos, unidades, isLoading, error };
 };

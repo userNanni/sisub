@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useUnidades } from "./hooks/useUnidades";
+import { useRancho } from "./hooks/useRancho";
 
 interface UnidadeDisponivel {
   value: string;
@@ -37,10 +37,10 @@ export const UnitSelector = memo<UnitSelectorProps>(
     size = "md",
     placeholder = "Selecione uma unidade...",
   }) => {
-    const { unidades } = useUnidades();
+    const { ranchos } = useRancho();
     // Memoizar dados computados
     const selectorData = useMemo(() => {
-      const selectedUnit = unidades.find((unit) => unit.value === value);
+      const selectedUnit = ranchos.find((unit) => unit.value === value);
       const isValidSelection = Boolean(selectedUnit);
       const displayLabel = selectedUnit?.label || value;
 
@@ -49,7 +49,7 @@ export const UnitSelector = memo<UnitSelectorProps>(
         isValidSelection,
         displayLabel,
       };
-    }, [JSON.stringify(unidades), value]);
+    }, [JSON.stringify(ranchos), value]);
 
     // Memoizar classes CSS baseadas nas props
     const classes = useMemo(() => {
@@ -107,7 +107,7 @@ export const UnitSelector = memo<UnitSelectorProps>(
     // Memoizar itens do select
     const selectItems = useMemo(
       () =>
-        unidades.map((unidade: UnidadeDisponivel) => (
+        ranchos.map((unidade: UnidadeDisponivel) => (
           <SelectItem
             className="cursor-pointer hover:bg-gray-50 focus:bg-gray-50 transition-colors"
             key={unidade.value}
@@ -121,7 +121,7 @@ export const UnitSelector = memo<UnitSelectorProps>(
             </div>
           </SelectItem>
         )),
-      [JSON.stringify(unidades), value]
+      [JSON.stringify(ranchos), value]
     );
 
     // Memoizar badges e indicadores

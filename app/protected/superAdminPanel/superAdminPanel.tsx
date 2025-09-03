@@ -1,3 +1,4 @@
+// Transformar AlertDialog de delete em Dialog com estado isOpen
 // src/components/SuperAdminPanel.tsx
 
 "use client";
@@ -78,6 +79,7 @@ import {
 import supabase from "@/utils/supabase";
 import { userLevelType } from "@/auth/auth"; // Assumindo que o tipo está aqui
 import { Route } from "./+types/superAdminPanel";
+import { useRancho } from "~/components/hooks/useRancho";
 
 // Definição do tipo para os dados da tabela profiles_admin
 export type ProfileAdmin = {
@@ -86,6 +88,7 @@ export type ProfileAdmin = {
   name: string | null;
   email: string;
   role: userLevelType;
+  om: string | null; // ADICIONADO
   created_at: string;
   updated_at: string;
 };
@@ -104,6 +107,7 @@ export default function SuperAdminPanel() {
   // State para os modais
   const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = React.useState(false);
+  const [isDeleteUserOpen, setIsDeleteUserOpen] = React.useState(false);
   const [selectedProfile, setSelectedProfile] =
     React.useState<ProfileAdmin | null>(null);
 
@@ -116,6 +120,14 @@ export default function SuperAdminPanel() {
 
   const [editSaram, setEditSaram] = React.useState("");
   const [editRole, setEditRole] = React.useState<userLevelType>(null);
+  const [editOm, setEditOm] = React.useState<string>(""); // ADICIONADO
+
+  // Hook de OMs
+  const {
+    unidades,
+    isLoading: isLoadingUnidades,
+    error: unidadesError,
+  } = useRancho();
 
   // Função para buscar os dados do Supabase
   const fetchProfiles = async () => {
@@ -220,7 +232,11 @@ export default function SuperAdminPanel() {
 
     const { error } = await supabase
       .from("profiles_admin")
-      .update({ role: editRole, saram: editSaram })
+      .update({
+        role: editRole,
+        saram: editSaram || null,
+        om: editOm || null, // ADICIONADO
+      })
       .eq("id", selectedProfile.id);
 
     if (error) {
@@ -238,21 +254,23 @@ export default function SuperAdminPanel() {
   };
 
   // Handler para excluir um usuário
-  const handleDeleteUser = async (id: string, email?: string | null) => {
+  const handleDeleteUser = async () => {
+    if (!selectedProfile) return;
+
     try {
       const { error } = await supabase
         .from("profiles_admin")
         .delete()
-        .eq("id", id);
+        .eq("id", selectedProfile.id);
 
       if (error) throw error;
 
       toast.success("Registro excluído", {
-        description: email
-          ? `Usuário ${email} removido.`
-          : "Remoção concluída.",
+        description: `Usuário ${selectedProfile.email} removido.`,
       });
 
+      setIsDeleteUserOpen(false);
+      setSelectedProfile(null);
       fetchProfiles();
     } catch (err: any) {
       toast.error("Erro ao excluir", {
@@ -314,6 +332,11 @@ export default function SuperAdminPanel() {
       cell: ({ row }) => <div>{row.getValue("saram") || "N/A"}</div>,
     },
     {
+      accessorKey: "om",
+      header: "OM",
+      cell: ({ row }) => <div>{row.getValue("om") || "N/A"}</div>,
+    },
+    {
       id: "actions",
       cell: ({ row }) => {
         const profile = row.original;
@@ -332,41 +355,22 @@ export default function SuperAdminPanel() {
                   setSelectedProfile(profile);
                   setEditSaram(profile.saram || "");
                   setEditRole(profile.role);
+                  setEditOm(profile.om || ""); // ADICIONADO
                   setIsEditUserOpen(true);
                 }}
               >
                 Editar
               </DropdownMenuItem>
 
-              {/* Excluir com confirmação */}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem className="text-destructive focus:text-destructive">
-                    Excluir
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tem certeza que deseja excluir o registro do usuário{" "}
-                      <strong>{profile.email}</strong>? Esta ação não pode ser
-                      desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={() =>
-                        handleDeleteUser(profile.id, profile.email)
-                      }
-                    >
-                      Excluir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => {
+                  setSelectedProfile(profile);
+                  setIsDeleteUserOpen(true);
+                }}
+              >
+                Excluir
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -646,7 +650,8 @@ export default function SuperAdminPanel() {
           <DialogHeader>
             <DialogTitle>Editar Perfil</DialogTitle>
             <DialogDescription>
-              Altere o SARAM e a Role para o usuário: {selectedProfile?.email}
+              Altere o SARAM, OM e a Role para o usuário:{" "}
+              {selectedProfile?.email}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -664,6 +669,34 @@ export default function SuperAdminPanel() {
                 placeholder="Apenas 7 números"
               />
             </div>
+
+            {/* Campo OM */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="om" className="text-right">
+                OM
+              </Label>
+              <Select
+                value={editOm || ""}
+                onValueChange={(value) => setEditOm(value)}
+                disabled={isLoadingUnidades}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue
+                    placeholder={
+                      isLoadingUnidades ? "Carregando OMs..." : "Selecione a OM"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {unidades.map((u) => (
+                    <SelectItem key={u.value} value={u.value}>
+                      {u.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
                 Role
@@ -682,10 +715,41 @@ export default function SuperAdminPanel() {
                 </SelectContent>
               </Select>
             </div>
+
+            {unidadesError && (
+              <p className="col-span-4 text-sm text-destructive">
+                {unidadesError}
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button type="submit" onClick={handleUpdateUser}>
               Salvar alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Exclusão */}
+      <Dialog open={isDeleteUserOpen} onOpenChange={setIsDeleteUserOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o registro do usuário{" "}
+              <strong>{selectedProfile?.email}</strong>? Esta ação não pode ser
+              desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteUserOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteUser}>
+              Excluir
             </Button>
           </DialogFooter>
         </DialogContent>

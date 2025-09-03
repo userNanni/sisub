@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useUnidades } from "./hooks/useUnidades";
+import { useRancho } from "./hooks/useRancho";
 
 interface DefaultUnitSelectorProps {
   defaultUnit: string;
@@ -38,13 +38,13 @@ export const DefaultUnitSelector = memo<DefaultUnitSelectorProps>(
     onCancel,
     isApplying,
   }) => {
-    const { unidades } = useUnidades();
+    const { ranchos } = useRancho();
     // Memoizar dados computados
     const selectorData = useMemo(() => {
       const cardsCount = cardsWithoutUnit.length;
       const hasCardsToApply = cardsCount > 0;
       const selectedUnitLabel =
-        unidades.find((unit) => unit.value === defaultUnit)?.label ||
+        ranchos.find((unit) => unit.value === defaultUnit)?.label ||
         defaultUnit;
 
       return {
@@ -105,13 +105,13 @@ export const DefaultUnitSelector = memo<DefaultUnitSelectorProps>(
     // Memoizar conteúdo dos itens do select
     const selectItems = useMemo(
       () =>
-        unidades.map((unidade) => (
+        ranchos.map((rancho) => (
           <SelectItem
             className="cursor-pointer hover:bg-orange-50 focus:bg-orange-50"
-            key={unidade.value}
-            value={unidade.value}
+            key={rancho.value}
+            value={rancho.value}
           >
-            {unidade.label}
+            {rancho.label}
           </SelectItem>
         )),
       []
