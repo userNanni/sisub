@@ -5,7 +5,7 @@ import {
   DEFAULT_UNIT,
   DAYS_TO_SHOW,
   NEAR_DATE_THRESHOLD,
-} from "../../components/constants/rancho";
+} from "../../../components/constants/rancho";
 
 describe("Rancho Constants", () => {
   describe("UNIDADES_DISPONIVEIS", () => {

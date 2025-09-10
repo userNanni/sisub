@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import supabase from "@/utils/supabase";
 import { type User, type Session, AuthError } from "@supabase/supabase-js";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export interface AuthContextType {
   user: User | null;
@@ -19,7 +20,6 @@ export interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshSession: () => Promise<void>;
-  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,36 +48,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           data: { session },
           error,
         } = await supabase.auth.getSession();
-
         if (error) {
           console.error("Error getting initial session:", error);
-          return;
         }
-
         if (mounted) {
-          await handleAuthChange(session);
+          await handleAuthChange(session ?? null);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
       } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
+        if (mounted) setIsLoading(false);
       }
     };
 
     initializeAuth();
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth state changed: ${event}`);
-
-      if (mounted) {
-        await handleAuthChange(session);
-        setIsLoading(false);
-      }
+      // Alguns ambientes disparam 'INITIAL_SESSION' ao assinar
+      // Outros disparam 'SIGNED_IN'/'TOKEN_REFRESHED' etc.
+      if (!mounted) return;
+      await handleAuthChange(session ?? null);
+      setIsLoading(false);
     });
 
     return () => {
@@ -160,15 +153,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setSession(null);
 
       // Force reload to ensure clean state
-      window.location.href = "/login";
     } catch (error) {
       console.error("Sign out error:", error);
       // Clear local state even on error
       setUser(null);
       setSession(null);
-      window.location.href = "/login";
     } finally {
+      setUser(null);
+      setSession(null);
       setIsLoading(false);
+      window.location.href = "/login";
     }
   };
 
@@ -194,7 +188,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  // Delete account - simplified without profile table
+  /* // Delete account - simplified without profile table
   const deleteAccount = async (): Promise<void> => {
     if (!user) {
       throw new Error("User not authenticated");
@@ -216,7 +210,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     } catch (error) {
       throw error;
     }
-  };
+  }; */
 
   const value: AuthContextType = {
     user,
@@ -228,7 +222,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     signOut,
     resetPassword,
     refreshSession,
-    deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -264,14 +257,25 @@ export const useAuth = () => {
 };
 
 // Additional utility hooks
-export const useRequireAuth = (redirectTo = "/login") => {
+export const useRequireAuth = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      window.location.href = redirectTo;
+      const redirectTo = encodeURIComponent(
+        `${location.pathname}${location.search}`
+      );
+      navigate(`/login?redirectTo=${redirectTo}`, { replace: true });
     }
-  }, [isAuthenticated, isLoading, redirectTo]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    location.pathname,
+    location.search,
+    navigate,
+  ]);
 
   return { isAuthenticated, isLoading };
 };

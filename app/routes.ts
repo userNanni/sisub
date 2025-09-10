@@ -1,28 +1,37 @@
-import { type RouteConfig, index, layout, route } from "@react-router/dev/routes";
+import {
+  type RouteConfig,
+  index,
+  layout,
+  route,
+} from "@react-router/dev/routes";
 
 export default [
   index("routes/home/home.tsx"),
-  route("changelog", "routes/home/changelog.tsx"), 
-  route("tutorial", "routes/home/tutorial.tsx"), 
+  route("changelog", "routes/home/changelog.tsx"),
+  route("tutorial", "routes/home/tutorial.tsx"),
 
-    layout("./auth/layout.tsx", [
-      route("login", "./auth/login.tsx"),
-      route("register", "./auth/register.tsx"),
-      route("/auth/reset-password", "./auth/resetPassword.tsx"),
+  layout("./auth/layout.tsx", [
+    route("login", "./auth/login.tsx"),
+    route("register", "./auth/register.tsx"),
+    route("/auth/reset-password", "./auth/resetPassword.tsx"),
+  ]),
+
+  layout("./routes/protected/layout.tsx", [
+    route("rancho", "./routes/protected/home/rancho.tsx"),
+    route("checkin", "./routes/protected/home/selfCheckIn.tsx"),
+
+    layout("./routes/protected/presence/layout.tsx", [
+      route("fiscal", "./routes/protected/presence/presence.tsx"),
     ]),
-
-    layout("./protected/layout.tsx", [
-      route("rancho", "./protected/home/rancho.tsx"),
-      layout("./protected/presence/layout.tsx", [
-        route("fiscal", "./protected/presence/presence.tsx"),
-      ]),
-      layout("./protected/superAdminPanel/layout.tsx", [
-        route("superadmin", "./protected/superAdminPanel/superAdminPanel.tsx"),
-      ]),
-      route("admin", "./protected/adminPanel/adminPanel.tsx"),
+    layout("./routes/protected/superAdminPanel/layout.tsx", [
+      route(
+        "superadmin",
+        "./routes/protected/superAdminPanel/superAdminPanel.tsx"
+      ),
     ]),
+    route("admin", "./routes/protected/adminPanel/adminPanel.tsx"),
+  ]),
 
-    // Nova rota API para Power BI
+  // Nova rota API para Power BI
   route("api/rancho", "./routes/apiRancho.tsx"),
-
 ] satisfies RouteConfig;

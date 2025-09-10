@@ -36,6 +36,35 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
+// Extrai redirectTo da URL e faz sanitização para evitar open redirect
+function getRedirectTo(
+  locationSearch: string,
+  locationState?: any
+): string | null {
+  const params = new URLSearchParams(locationSearch);
+  const qsTarget = params.get("redirectTo");
+  const stateTarget = locationState?.from?.pathname as string | undefined;
+  return qsTarget ?? stateTarget ?? null;
+}
+
+function safeRedirect(
+  target: string | null | undefined,
+  fallback = "/rancho"
+): string {
+  if (!target) return fallback;
+  let decoded = target;
+  try {
+    decoded = decodeURIComponent(target);
+  } catch {
+    // mantém target original se falhar decode
+  }
+  // Permite apenas caminhos internos tipo "/alguma-coisa" (não "//dominio")
+  if (decoded.startsWith("/") && !decoded.startsWith("//")) {
+    return decoded;
+  }
+  return fallback;
+}
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,15 +83,18 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect if already authenticated
+  // Redireciona se já estiver autenticado (respeita redirectTo/state.from)
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      const from = location.state?.from?.pathname || "/rancho";
-      navigate(from, { replace: true });
+      const target = safeRedirect(
+        getRedirectTo(location.search, location.state),
+        "/rancho"
+      );
+      navigate(target, { replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate, location]);
+  }, [isAuthenticated, isLoading, navigate, location.search, location.state]);
 
-  // Load saved email if remember me was checked
+  // Carrega email salvo (remember me)
   useEffect(() => {
     const savedEmail = localStorage.getItem("fab_remember_email");
     if (savedEmail) {
@@ -74,7 +106,7 @@ export default function Login() {
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newEmail = e.target.value;
     setEmail(newEmail);
-    setApiError(""); // Clear API error when user types
+    setApiError("");
 
     if (newEmail && !FAB_EMAIL_REGEX.test(newEmail)) {
       setEmailError("Por favor, utilize um email institucional (@fab.mil.br).");
@@ -85,7 +117,7 @@ export default function Login() {
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
-    setApiError(""); // Clear API error when user types
+    setApiError("");
   };
 
   const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,18 +151,23 @@ export default function Login() {
     try {
       await signIn(email, password);
 
-      // Save email if remember me is checked
+      // Persistência do email conforme "Lembrar email"
       if (rememberMe) {
         localStorage.setItem("fab_remember_email", email);
       } else {
         localStorage.removeItem("fab_remember_email");
       }
 
-      // Navigation is handled by the useEffect above
+      // Redireciona imediatamente após login com base no redirectTo/state
+      const target = safeRedirect(
+        getRedirectTo(location.search, location.state),
+        "/rancho"
+      );
+      navigate(target, { replace: true });
     } catch (err: any) {
       console.error("Falha no login:", err);
       setApiError(
-        err.message ||
+        err?.message ||
           "Ocorreu um erro durante a autenticação. Tente mais tarde."
       );
     } finally {
@@ -159,14 +196,21 @@ export default function Login() {
     } catch (err: any) {
       console.error("Erro ao enviar email de recuperação:", err);
       setApiError(
-        err.message || "Erro ao enviar email de recuperação. Tente novamente."
+        err?.message || "Erro ao enviar email de recuperação. Tente novamente."
       );
     } finally {
       setIsResettingPassword(false);
     }
   };
 
-  // Show loading state while checking authentication
+  // Mantém redirectTo na navegação para registro
+  const registerHref = (() => {
+    const qs = new URLSearchParams(location.search);
+    const query = qs.toString();
+    return `/register${query ? `?${query}` : ""}`;
+  })();
+
+  // Loading
   if (isLoading) {
     return (
       <Card className="w-full max-w-md mx-auto">
@@ -257,7 +301,7 @@ export default function Login() {
                   variant="ghost"
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword((s) => !s)}
                   disabled={isSubmitting}
                 >
                   {showPassword ? (
@@ -304,7 +348,7 @@ export default function Login() {
           <CardFooter className="flex flex-col space-y-4">
             <Button
               type="submit"
-              className="w-full w-full my-6 py-3 text-lg font-semibold"
+              className="w-full my-6 py-3 text-lg font-semibold"
               disabled={isSubmitting || !!emailError || !email || !password}
             >
               {isSubmitting && (
@@ -316,7 +360,7 @@ export default function Login() {
             <p className="text-sm text-center text-muted-foreground">
               Não tem uma conta?{" "}
               <Link
-                to="/register"
+                to={registerHref}
                 className="text-primary hover:underline font-medium"
               >
                 Cadastre-se
@@ -359,7 +403,7 @@ export default function Login() {
           <CardFooter className="flex flex-col space-y-4">
             <Button
               type="submit"
-              className="w-full w-full my-6 py-3 text-lg font-semibold"
+              className="w-full my-6 py-3 text-lg font-semibold"
               disabled={isResettingPassword || !resetEmail}
             >
               {isResettingPassword && (
