@@ -1,20 +1,34 @@
-import { Outlet, Navigate, useNavigate } from "react-router-dom";
+import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/auth";
 import RanchoHeader from "~/components/RanchoHeader";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function ProtectedLayout() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoading, refreshSession, signOut } = useAuth();
+  const location = useLocation();
+
+  const attemptedRecoveryRef = useRef(false);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
-    if (user === null) {
-      setShouldRedirect(true);
-    }
-    setIsLoading(false);
-  }, [user]);
+    if (isLoading) return;
+    if (user) return;
+    if (attemptedRecoveryRef.current) return;
+
+    attemptedRecoveryRef.current = true;
+    setRecovering(true);
+
+    (async () => {
+      try {
+        await refreshSession().catch(() => {});
+        // Dê um micro-tempo para o provider propagar mudanças do supabase-js
+        await new Promise((r) => setTimeout(r, 50));
+      } finally {
+        setRecovering(false);
+      }
+    })();
+  }, [isLoading, user, refreshSession]);
 
   if (isLoading) {
     return (
@@ -27,8 +41,11 @@ export default function ProtectedLayout() {
     );
   }
 
-  if (shouldRedirect) {
-    return <Navigate to="/login" replace />;
+  if (!user) {
+    const redirectTo = encodeURIComponent(
+      `${location.pathname}${location.search}`
+    );
+    return <Navigate to={`/login?redirectTo=${redirectTo}`} replace />;
   }
 
   const handleSignOut = async () => {

@@ -61,7 +61,7 @@ export default function SelfCheckin() {
   // Autenticação + preparação do diálogo (sem auto-insert)
   useEffect(() => {
     let cancelled = false;
-
+    console.log("Iniciando check-in:", { date, meal, unidade });
     const run = async () => {
       // 1) Verifica usuário autenticado
       const { data: authData, error: authErr } = await supabase.auth.getUser();
@@ -78,6 +78,7 @@ export default function SelfCheckin() {
       }
 
       const userId = authData.user.id;
+      console.log(userId);
 
       // 2) Valida unidade mínima
       if (!unidade) {
