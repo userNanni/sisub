@@ -295,6 +295,7 @@ export const useUserInfo = () => {
     id: user?.id,
   };
 };
+
 export type userLevelType = "user" | "admin" | "superadmin" | null;
 
 /**
@@ -342,6 +343,46 @@ export async function checkUserLevel(
     } else {
       return null;
     }
+  } catch (e) {
+    console.error("Erro inesperado ao verificar o nível do usuário:", e);
+    return null; // Retorna null para qualquer erro não esperado.
+  }
+}
+
+export type userOmType = string | null;
+
+export async function checkUserOm(
+  userId: string | null | undefined
+): Promise<userOmType> {
+  // 1. Se não houver userId, não podemos determinar o nível.
+  if (!userId) {
+    return null;
+  }
+
+  try {
+    // 2. Faz a consulta ao Supabase para buscar a role do usuário.
+    const { data, error } = await supabase
+      .from("profiles_admin")
+      .select("om")
+      .eq("id", userId)
+      .maybeSingle();
+
+    // 3. Em caso de erro na consulta, exibe no console e retorna null.
+    if (error) {
+      console.error("Erro ao verificar o nível de admin:", error);
+      return null;
+    }
+
+    // 4. Se a consulta não retornar dados, significa que o usuário não tem uma role
+    // superior, então ele é um usuário comum.
+    if (!data) {
+      return null;
+    }
+
+    // 5. Se a role for 'admin' ou 'superadmin', retorna o nível correspondente.
+    // Caso contrário, por segurança, trata como um usuário comum.
+
+    return data.om;
   } catch (e) {
     console.error("Erro inesperado ao verificar o nível do usuário:", e);
     return null; // Retorna null para qualquer erro não esperado.

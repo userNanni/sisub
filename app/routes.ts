@@ -23,12 +23,11 @@ export default [
     layout("./routes/protected/presence/layout.tsx", [
       route("fiscal", "./routes/protected/presence/presence.tsx"),
     ]),
-    layout("./routes/protected/superAdminPanel/layout.tsx", [
-      route(
-        "superadmin",
-        "./routes/protected/superAdminPanel/superAdminPanel.tsx"
-      ),
-    ]),
+
+    route(
+      "superadmin",
+      "./routes/protected/superAdminPanel/superAdminPanel.tsx"
+    ),
     route("admin", "./routes/protected/adminPanel/adminPanel.tsx"),
   ]),
 

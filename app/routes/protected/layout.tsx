@@ -22,7 +22,6 @@ export default function ProtectedLayout() {
     (async () => {
       try {
         await refreshSession().catch(() => {});
-        // Dê um micro-tempo para o provider propagar mudanças do supabase-js
         await new Promise((r) => setTimeout(r, 50));
       } finally {
         setRecovering(false);
@@ -58,10 +57,30 @@ export default function ProtectedLayout() {
     }
   };
 
+  // Rotas que precisam de "full-bleed" (sem max-width e sem padding lateral)
+  const fullBleedRoutes = ["/admin", "/superadmin"];
+  const isFullBleed = fullBleedRoutes.some((p) =>
+    location.pathname.startsWith(p)
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      className={
+        isFullBleed
+          ? "min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50"
+          : "min-h-screen bg-gray-50"
+      }
+    >
       <RanchoHeader user={user} signOut={handleSignOut} />
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main
+        className={
+          isFullBleed
+            ? // Full-bleed: sem max-width e sem padding lateral, só padding vertical
+              "py-6"
+            : // Default: centralizado com max-width e paddings
+              "max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8"
+        }
+      >
         <Outlet />
       </main>
     </div>

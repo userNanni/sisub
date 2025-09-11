@@ -119,16 +119,10 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
                 <div className="px-3 sm:px-6 py-4 sm:py-8 bg-gray-50">
                   <div className="flex flex-col items-center space-y-3 sm:space-y-4">
                     <div className="bg-white p-3 sm:p-6 rounded-xl sm:rounded-2xl shadow-lg border-2 sm:border-4 border-gray-100 relative w-fit">
-                      <div className="absolute -top-1 sm:-top-2 -left-1 sm:-left-2 w-2 h-2 sm:w-4 sm:h-4 bg-blue-600 rounded-full"></div>
-                      <div className="absolute -top-1 sm:-top-2 -right-1 sm:-right-2 w-2 h-2 sm:w-4 sm:h-4 bg-blue-600 rounded-full"></div>
-                      <div className="absolute -bottom-1 sm:-bottom-2 -left-1 sm:-left-2 w-2 h-2 sm:w-4 sm:h-4 bg-blue-600 rounded-full"></div>
-                      <div className="absolute -bottom-1 sm:-bottom-2 -right-1 sm:-right-2 w-2 h-2 sm:w-4 sm:h-4 bg-blue-600 rounded-full"></div>
-
                       <QRCodeCanvas
                         value={user?.id || ""}
                         size={getQRSize()}
                         level="M"
-                        includeMargin={false}
                         bgColor="#ffffff"
                         fgColor="#1f2937"
                       />
@@ -143,12 +137,6 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
                           {user?.id || "N/A"}
                         </span>
                       </div>
-                    </div>
-
-                    <div className="flex space-x-1.5 sm:space-x-2 mt-2 sm:mt-4">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-300 rounded-full animate-pulse"></div>
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full animate-pulse delay-75"></div>
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full animate-pulse delay-150"></div>
                     </div>
                   </div>
                 </div>
