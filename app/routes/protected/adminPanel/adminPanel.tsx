@@ -143,6 +143,23 @@ export default function AdminPanel() {
   // Altura do iframe
   const frameHeight = useMemo(() => "clamp(520px, 78vh, 1000px)", []);
 
+  const baseUrl = "https://app.previsaosisub.com.br/checkin";
+
+  const qrValue = (() => {
+    const url = new URL(baseUrl);
+    // Higieniza e adiciona params
+    const om = (selectedOm ?? "")
+      .normalize("NFKC") // normaliza acentos/caracteres “estranhos”
+      .trim();
+    url.searchParams.set("u", om);
+
+    // Ex.: adicionar mais parâmetros
+    // url.searchParams.set("ref", "painel");
+    // url.searchParams.set("ts", String(Date.now()));
+
+    return url.toString(); // já vem corretamente codificado
+  })();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Hero */}
@@ -343,12 +360,13 @@ export default function AdminPanel() {
               >
                 {currentOm ? (
                   <QRCodeCanvas
-                    value={currentOm}
-                    size={200}
-                    level="M"
+                    value={qrValue}
+                    size={256}
+                    level="Q"
                     bgColor="#ffffff"
                     fgColor="#1f2937"
                     aria-label="QR code para auto check-in da OM"
+                    marginSize={2}
                   />
                 ) : (
                   <div
