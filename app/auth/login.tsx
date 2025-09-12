@@ -82,6 +82,7 @@ export default function Login() {
   const { signIn, resetPassword, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [passwordError, setPasswordError] = useState("");
 
   // Redireciona se já estiver autenticado (respeita redirectTo/state.from)
   useEffect(() => {
@@ -114,10 +115,10 @@ export default function Login() {
       setEmailError("");
     }
   };
-
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
     setApiError("");
+    setPasswordError("");
   };
 
   const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,10 +167,16 @@ export default function Login() {
       navigate(target, { replace: true });
     } catch (err: any) {
       console.error("Falha no login:", err);
-      setApiError(
-        err?.message ||
-          "Ocorreu um erro durante a autenticação. Tente mais tarde."
-      );
+      if (err?.code === "INVALID_CREDENTIALS") {
+        setPasswordError("Senha incorreta");
+        setApiError(""); // não mostrar alerta geral neste caso
+      } else {
+        setApiError(
+          err?.message ||
+            "Ocorreu um erro durante a autenticação. Tente mais tarde."
+        );
+        setPasswordError("");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -290,7 +297,10 @@ export default function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={handlePasswordChange}
-                  className="pl-10 pr-10"
+                  className={cn("pl-10 pr-10", {
+                    "border-red-500 focus-visible:ring-red-500":
+                      !!passwordError,
+                  })}
                   required
                   disabled={isSubmitting}
                   autoComplete="current-password"
@@ -311,6 +321,12 @@ export default function Login() {
                   )}
                 </Button>
               </div>
+              {passwordError && (
+                <p className="text-sm text-red-600 mt-1 flex items-center">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  {passwordError}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between">

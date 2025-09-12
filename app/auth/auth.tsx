@@ -24,6 +24,58 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+type NormalizedAuthError = {
+  code:
+    | "INVALID_CREDENTIALS"
+    | "EMAIL_NOT_CONFIRMED"
+    | "RATE_LIMITED"
+    | "INVALID_EMAIL"
+    | "WEAK_PASSWORD"
+    | "SIGNUP_DISABLED"
+    | "UNKNOWN";
+  message: string;
+};
+
+const normalizeAuthError = (e: any): NormalizedAuthError => {
+  const status = e?.status as number | undefined;
+  const msg = (e?.message as string | undefined) || "Erro de autenticação";
+
+  if (/invalid login credentials/i.test(msg)) {
+    return {
+      code: "INVALID_CREDENTIALS",
+      message: "Email ou senha incorretos",
+    };
+  }
+  if (/email not confirmed/i.test(msg)) {
+    return {
+      code: "EMAIL_NOT_CONFIRMED",
+      message: "Por favor, confirme seu email antes de fazer login",
+    };
+  }
+  if (/rate limit/i.test(msg) || status === 429) {
+    return {
+      code: "RATE_LIMITED",
+      message: "Muitas tentativas. Aguarde um pouco e tente novamente.",
+    };
+  }
+  if (/invalid format/i.test(msg)) {
+    return { code: "INVALID_EMAIL", message: "Formato de email inválido" };
+  }
+  if (/at least 6 characters/i.test(msg)) {
+    return {
+      code: "WEAK_PASSWORD",
+      message: "A senha deve ter pelo menos 6 caracteres",
+    };
+  }
+  if (/signup is disabled/i.test(msg)) {
+    return {
+      code: "SIGNUP_DISABLED",
+      message: "Cadastro temporariamente desabilitado",
+    };
+  }
+  return { code: "UNKNOWN", message: msg };
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -81,20 +133,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   // Sign in with enhanced error handling
   const signIn = async (email: string, password: string): Promise<void> => {
-    try {
-      setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
 
-      if (error) {
-        throw new Error(getAuthErrorMessage(error));
-      }
-    } catch (error) {
-      throw error;
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      console.debug("Supabase signIn error:", {
+        name: (error as any)?.name,
+        status: (error as any)?.status,
+        message: error.message,
+      });
+      const normalized = normalizeAuthError(error);
+      const err: any = new Error(normalized.message);
+      err.code = normalized.code;
+      err.status = (error as any)?.status;
+      throw err;
     }
   };
 
@@ -187,30 +241,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       throw new Error(getAuthErrorMessage(error));
     }
   };
-
-  /* // Delete account - simplified without profile table
-  const deleteAccount = async (): Promise<void> => {
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
-    try {
-      // Delete auth user (requires RLS policy or admin privileges)
-      const { error: authError } = await supabase.auth.admin.deleteUser(
-        user.id
-      );
-
-      if (authError) {
-        throw new Error(`Failed to delete account: ${authError.message}`);
-      }
-
-      // Clear local state
-      setUser(null);
-      setSession(null);
-    } catch (error) {
-      throw error;
-    }
-  }; */
 
   const value: AuthContextType = {
     user,
