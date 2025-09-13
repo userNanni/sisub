@@ -20,11 +20,14 @@ import {
   DialogState,
   generateRestrictedDates,
 } from "~/utils/FiscalUtils";
-import FiscalDialog from "~/components/FiscalDialog";
-import PresenceTable from "~/components/PresenceTable";
+import FiscalDialog from "~/components/presence/FiscalDialog";
+import PresenceTable from "~/components/presence/PresenceTable";
 import { usePresenceManagement } from "~/components/hooks/usePresenceManagement";
 import { Switch } from "~/components/ui/switch";
 import { Label } from "~/components/ui/label";
+import { useAuth } from "~/auth/auth";
+import { checkUserLevel } from "~/auth/adminService";
+import { Navigate } from "react-router";
 
 // Tipos de estado e ação para o scanner
 interface ScannerState {
@@ -109,6 +112,25 @@ export default function Qr() {
   const [isProcessing, setIsProcessing] = useState(false);
   const dates = useMemo(() => generateRestrictedDates(), []);
   const defaultMeal = useMemo(() => inferDefaultMeal(), []);
+
+  const { user } = useAuth();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  useEffect(() => {
+    const fetchUserLevel = async () => {
+      if (user?.id) {
+        const level = await checkUserLevel(user.id);
+        if (level === null) {
+          setShouldRedirect(true);
+        }
+      }
+    };
+    fetchUserLevel();
+  }, [user]);
+
+  if (shouldRedirect) {
+    return <Navigate to="/rancho" replace />;
+  }
 
   const [filters, setFilters] = useState<FiscalFilters>({
     date: dates[1],

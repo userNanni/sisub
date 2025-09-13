@@ -1,6 +1,6 @@
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../auth/auth";
-import RanchoHeader from "~/components/RanchoHeader";
+import RanchoHeader from "~/components/rancho/RanchoHeader";
 import { useState, useEffect, useRef } from "react";
 
 export default function ProtectedLayout() {

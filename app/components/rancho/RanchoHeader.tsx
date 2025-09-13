@@ -13,7 +13,7 @@ import { useState, useEffect, useMemo, type JSX } from "react";
 import { checkUserLevel, UserLevelOrNull } from "~/auth/adminService";
 import { AuthContextType } from "~/auth/auth";
 import { QRCodeCanvas } from "qrcode.react"; // novo import
-import RouteSelector from "./routeSelector";
+import RouteSelector from "../routeSelector";
 
 interface RanchoHeaderProps {
   user: AuthContextType["user"];

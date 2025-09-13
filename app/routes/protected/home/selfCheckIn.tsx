@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router";
 import supabase from "@/utils/supabase";
 import { toast } from "sonner";
 import type { MealKey, DialogState } from "~/utils/FiscalUtils";
-import FiscalDialog from "~/components/FiscalDialog";
+import FiscalDialog from "~/components/presence/FiscalDialog";
 import { Button } from "@/components/ui/button";
 
 // Mesmas regras usadas no presence

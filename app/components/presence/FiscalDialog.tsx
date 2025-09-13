@@ -7,8 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "./ui/alert-dialog";
-import { Button } from "./ui/button";
+} from "../ui/alert-dialog";
+import { Button } from "../ui/button";
 import type { Dispatch, SetStateAction } from "react";
 import type { DialogState } from "@/utils/FiscalUtils";
 

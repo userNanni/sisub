@@ -27,7 +27,7 @@ import {
 
 import { DefaultUnitSelector } from "@/components/DefaultUnitSelector";
 import { AlertMessages } from "@/components/AlertMessage";
-import { PendingChangesStatus } from "@/components/PendingChangesStatus";
+import { PendingChangesStatus } from "~/components/rancho/PendingChangesStatus";
 import {
   createEmptyDayMeals,
   formatDate,
@@ -36,15 +36,15 @@ import {
   type DayMeals,
 } from "~/utils/RanchoUtils";
 import { NEAR_DATE_THRESHOLD } from "@/components/constants/rancho";
-import { DayCardSkeleton } from "@/components/DayCard";
-import SimplifiedMilitaryStatsSkeleton from "~/components/SimplifiedMilitaryStatsSkeleton";
-import BulkMealSelector from "@/components/BulkMealSelector"; // Novo import
+import { DayCardSkeleton } from "~/components/rancho/DayCard";
+import SimplifiedMilitaryStatsSkeleton from "~/components/rancho/SimplifiedMilitaryStatsSkeleton";
+import BulkMealSelector from "~/components/rancho/BulkMealSelector"; // Novo import
 import type { Route } from "./+types/rancho";
 
 const SimplifiedMilitaryStats = lazy(
-  () => import("@/components/SimplifiedMilitaryStats")
+  () => import("~/components/rancho/SimplifiedMilitaryStats")
 );
-const DayCard = lazy(() => import("@/components/DayCard"));
+const DayCard = lazy(() => import("~/components/rancho/DayCard"));
 
 /* ============================
    Constantes e utilitários puros

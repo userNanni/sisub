@@ -19,11 +19,7 @@ export default [
   layout("./routes/protected/layout.tsx", [
     route("rancho", "./routes/protected/home/rancho.tsx"),
     route("checkin", "./routes/protected/home/selfCheckIn.tsx"),
-
-    layout("./routes/protected/presence/layout.tsx", [
-      route("fiscal", "./routes/protected/presence/presence.tsx"),
-    ]),
-
+    route("fiscal", "./routes/protected/presence/presence.tsx"),
     route(
       "superadmin",
       "./routes/protected/superAdminPanel/superAdminPanel.tsx"

@@ -1,5 +1,5 @@
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import {
   Table,
   TableBody,
@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
   TableHead,
-} from "./ui/table";
+} from "../ui/table";
 import { Trash2 } from "lucide-react";
 import { formatDate } from "@/utils/RanchoUtils";
 import { MEAL_LABEL, MealKey, PresenceRecord } from "~/utils/FiscalUtils";
