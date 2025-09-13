@@ -25,7 +25,7 @@ import {
   type DayUnits,
 } from "@/components/hooks/useRanchoData";
 
-import { DefaultUnitSelector } from "@/components/DefaultUnitSelector";
+import { DefaultUnitSelector } from "~/components/rancho/DefaultUnitSelector";
 import { AlertMessages } from "@/components/AlertMessage";
 import { PendingChangesStatus } from "~/components/rancho/PendingChangesStatus";
 import {
