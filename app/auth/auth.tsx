@@ -1,3 +1,6 @@
+// app/auth/auth.tsx
+import { normalizeAuthError, getAuthErrorMessage } from "@/auth/erros";
+
 import React, {
   createContext,
   useContext,
@@ -7,8 +10,8 @@ import React, {
   type ReactNode,
 } from "react";
 import supabase from "@/utils/supabase";
-import { type User, type Session, AuthError } from "@supabase/supabase-js";
-import { useLocation, useNavigate } from "react-router-dom";
+import { type User, type Session } from "@supabase/supabase-js";
+import { useLocation, useNavigate, SessionStorage } from "react-router";
 
 export interface AuthContextType {
   user: User | null;
@@ -23,58 +26,6 @@ export interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-type NormalizedAuthError = {
-  code:
-    | "INVALID_CREDENTIALS"
-    | "EMAIL_NOT_CONFIRMED"
-    | "RATE_LIMITED"
-    | "INVALID_EMAIL"
-    | "WEAK_PASSWORD"
-    | "SIGNUP_DISABLED"
-    | "UNKNOWN";
-  message: string;
-};
-
-const normalizeAuthError = (e: any): NormalizedAuthError => {
-  const status = e?.status as number | undefined;
-  const msg = (e?.message as string | undefined) || "Erro de autenticação";
-
-  if (/invalid login credentials/i.test(msg)) {
-    return {
-      code: "INVALID_CREDENTIALS",
-      message: "Email ou senha incorretos",
-    };
-  }
-  if (/email not confirmed/i.test(msg)) {
-    return {
-      code: "EMAIL_NOT_CONFIRMED",
-      message: "Por favor, confirme seu email antes de fazer login",
-    };
-  }
-  if (/rate limit/i.test(msg) || status === 429) {
-    return {
-      code: "RATE_LIMITED",
-      message: "Muitas tentativas. Aguarde um pouco e tente novamente.",
-    };
-  }
-  if (/invalid format/i.test(msg)) {
-    return { code: "INVALID_EMAIL", message: "Formato de email inválido" };
-  }
-  if (/at least 6 characters/i.test(msg)) {
-    return {
-      code: "WEAK_PASSWORD",
-      message: "A senha deve ter pelo menos 6 caracteres",
-    };
-  }
-  if (/signup is disabled/i.test(msg)) {
-    return {
-      code: "SIGNUP_DISABLED",
-      message: "Cadastro temporariamente desabilitado",
-    };
-  }
-  return { code: "UNKNOWN", message: msg };
-};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -164,11 +115,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         },
       });
 
-      if (error) {
-        throw new Error(getAuthErrorMessage(error));
-      }
-    } catch (error) {
-      throw error;
+      if (error) throw new Error(getAuthErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -178,43 +125,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const signOut = async (): Promise<void> => {
     try {
       setIsLoading(true);
-
-      // Clear cookies and local storage first
-      document.cookie.split(";").forEach((c) => {
-        const eqPos = c.indexOf("=");
-        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
-        document.cookie =
-          name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-        document.cookie =
-          name +
-          "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" +
-          window.location.hostname;
-      });
-
-      // Clear localStorage
-      localStorage.clear();
-      sessionStorage.clear();
-
       const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.error("Sign out error:", error);
-        // Even if there's an error, clear local state
-      }
-
-      // Clear local state
-      setUser(null);
-      setSession(null);
-
-      // Force reload to ensure clean state
+      if (error) console.error("Sign out error:", error);
     } catch (error) {
       console.error("Sign out error:", error);
-      // Clear local state even on error
-      setUser(null);
-      setSession(null);
     } finally {
+      // Limpa estado local do app
       setUser(null);
       setSession(null);
+      // Limpa apenas o que seu app criou
+      localStorage.removeItem("fab_remember_email");
+      sessionStorage.removeItem("auth:redirectTo");
       setIsLoading(false);
       window.location.href = "/login";
     }
@@ -255,26 +176,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-// Helper function for better error messages
-const getAuthErrorMessage = (error: AuthError): string => {
-  switch (error.message) {
-    case "Invalid login credentials":
-      return "Email ou senha incorretos";
-    case "Email not confirmed":
-      return "Por favor, confirme seu email antes de fazer login";
-    case "User already registered":
-      return "Este email já está cadastrado";
-    case "Password should be at least 6 characters":
-      return "A senha deve ter pelo menos 6 caracteres";
-    case "Unable to validate email address: invalid format":
-      return "Formato de email inválido";
-    case "Signup is disabled":
-      return "Cadastro temporariamente desabilitado";
-    default:
-      return error.message;
-  }
 };
 
 // Custom hook with additional utilities
@@ -325,96 +226,3 @@ export const useUserInfo = () => {
     id: user?.id,
   };
 };
-
-export type userLevelType = "user" | "admin" | "superadmin" | null;
-
-/**
- * Verifica o nível de permissão de um usuário.
- * Se o usuário estiver na tabela 'profiles_admin' com a role 'admin' ou 'superadmin', retorna essa role.
- * Caso contrário, ou se não for encontrado, retorna 'user'.
- * Retorna 'null' se o userId não for fornecido ou em caso de erro na consulta.
- */
-export async function checkUserLevel(
-  userId: string | null | undefined
-): Promise<userLevelType> {
-  // 1. Se não houver userId, não podemos determinar o nível.
-  if (!userId) {
-    return null;
-  }
-
-  try {
-    // 2. Faz a consulta ao Supabase para buscar a role do usuário.
-    const { data, error } = await supabase
-      .from("profiles_admin")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
-
-    // 3. Em caso de erro na consulta, exibe no console e retorna null.
-    if (error) {
-      console.error("Erro ao verificar o nível de admin:", error);
-      return null;
-    }
-
-    // 4. Se a consulta não retornar dados, significa que o usuário não tem uma role
-    // superior, então ele é um usuário comum.
-    if (!data) {
-      return null;
-    }
-
-    // 5. Se a role for 'admin' ou 'superadmin', retorna o nível correspondente.
-    // Caso contrário, por segurança, trata como um usuário comum.
-    if (
-      data.role === "admin" ||
-      data.role === "superadmin" ||
-      data.role === "user"
-    ) {
-      return data.role;
-    } else {
-      return null;
-    }
-  } catch (e) {
-    console.error("Erro inesperado ao verificar o nível do usuário:", e);
-    return null; // Retorna null para qualquer erro não esperado.
-  }
-}
-
-export type userOmType = string | null;
-
-export async function checkUserOm(
-  userId: string | null | undefined
-): Promise<userOmType> {
-  // 1. Se não houver userId, não podemos determinar o nível.
-  if (!userId) {
-    return null;
-  }
-
-  try {
-    // 2. Faz a consulta ao Supabase para buscar a role do usuário.
-    const { data, error } = await supabase
-      .from("profiles_admin")
-      .select("om")
-      .eq("id", userId)
-      .maybeSingle();
-
-    // 3. Em caso de erro na consulta, exibe no console e retorna null.
-    if (error) {
-      console.error("Erro ao verificar o nível de admin:", error);
-      return null;
-    }
-
-    // 4. Se a consulta não retornar dados, significa que o usuário não tem uma role
-    // superior, então ele é um usuário comum.
-    if (!data) {
-      return null;
-    }
-
-    // 5. Se a role for 'admin' ou 'superadmin', retorna o nível correspondente.
-    // Caso contrário, por segurança, trata como um usuário comum.
-
-    return data.om;
-  } catch (e) {
-    console.error("Erro inesperado ao verificar o nível do usuário:", e);
-    return null; // Retorna null para qualquer erro não esperado.
-  }
-}

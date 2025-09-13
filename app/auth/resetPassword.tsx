@@ -1,6 +1,10 @@
-// ResetPassword.tsx
+// app/auth/resetPassword.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  type Location as RouterLocation,
+} from "react-router";
 import supabase from "@/utils/supabase";
 import { useAuth } from "./auth";
 
@@ -25,8 +29,6 @@ import {
   EyeOff,
 } from "lucide-react";
 import { cn } from "~/utils/utils";
-
-import type { Location as RouterLocation } from "react-router-dom";
 
 function getSearchParams(location: RouterLocation) {
   const hashParams = new URLSearchParams(
@@ -94,7 +96,7 @@ export default function ResetPassword() {
         // 2) Tentar criar sessão com token_hash (OTP -> verifyOtp)
         if (tokenHash) {
           const { data, error } = await supabase.auth.verifyOtp({
-            type: "email",
+            type: "recovery",
             token_hash: tokenHash,
           });
 

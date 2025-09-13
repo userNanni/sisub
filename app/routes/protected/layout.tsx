@@ -1,4 +1,4 @@
-import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, Navigate, useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../auth/auth";
 import RanchoHeader from "~/components/RanchoHeader";
 import { useState, useEffect, useRef } from "react";

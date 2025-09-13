@@ -1,6 +1,6 @@
 // routes/protected/presence/selfCheckin.tsx
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import supabase from "@/utils/supabase";
 import { toast } from "sonner";
 import type { MealKey, DialogState } from "~/utils/FiscalUtils";

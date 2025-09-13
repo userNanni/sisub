@@ -57,8 +57,7 @@ export const overviewCards: StepItem[] = [
   {
     iconName: "CalendarCheck",
     title: "Marque as Refeições",
-    description:
-      "Café, almoço, janta e ceia – selecione o que irá consumir.",
+    description: "Café, almoço, janta e ceia – selecione o que irá consumir.",
     color: "border-green-100",
   },
   {
@@ -175,7 +174,7 @@ export const faqItems: QAItem[] = [
   {
     question: "Minhas alterações não salvaram",
     answer:
-      'Verifique se há alterações pendentes e clique em “Salvar alterações”. Aguarde a confirmação antes de sair da página.',
+      "Verifique se há alterações pendentes e clique em “Salvar alterações”. Aguarde a confirmação antes de sair da página.",
   },
   {
     question: "Sem acesso à câmera",
@@ -192,14 +191,12 @@ export const troubleshooting: string[] = [
 
 export const privacy = {
   title: "Privacidade e Segurança",
-  text:
-    "O uso do QR e das previsões deve seguir as normas internas da OM. Em caso de dúvidas sobre dados e acessos, procure o responsável pelo sistema.",
+  text: "O uso do QR e das previsões deve seguir as normas internas da OM. Em caso de dúvidas sobre dados e acessos, procure o responsável pelo sistema.",
 };
 
 export const ctaData = {
   title: "Pronto para aplicar?",
-  text:
-    "Acesse agora as páginas de Previsão e Fiscalização para colocar em prática os passos deste tutorial.",
+  text: "Acesse agora as páginas de Previsão e Fiscalização para colocar em prática os passos deste tutorial.",
   buttons: [
     { to: "/rancho", label: "Abrir Previsão →", variant: "default" as const },
     {

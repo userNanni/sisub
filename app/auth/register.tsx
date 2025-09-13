@@ -1,7 +1,8 @@
+// app/auth/register.tsx
+import { FAB_EMAIL_REGEX } from "./constants";
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router";
 import { useAuth } from "./auth";
-import { AuthError } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +31,6 @@ import {
 import { cn } from "~/utils/utils";
 
 import type { Route } from "./+types/register";
-
-const FAB_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@fab\.mil\.br$/;
 
 // Password strength validation
 const getPasswordStrength = (password: string) => {

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import type { Route } from "./+types/adminPanel";
-import { checkUserLevel, checkUserOm, useAuth } from "~/auth/auth";
+import { checkUserLevel } from "~/auth/adminService";
+import { useAuth } from "~/auth/auth";
 import { Navigate } from "react-router";
 // Ícones lucide-react
 import {

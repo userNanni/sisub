@@ -1,5 +1,6 @@
-import { Outlet, Navigate } from "react-router-dom";
-import { checkUserLevel, useAuth } from "@/auth/auth";
+import { Outlet, Navigate } from "react-router";
+import { checkUserLevel } from "@/auth/adminService";
+import { useAuth } from "@/auth/auth";
 import { useState, useEffect } from "react";
 
 export default function FiscalLayout() {

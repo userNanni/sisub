@@ -1,6 +1,9 @@
+// app/auth/login.tsx
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router";
 import { useAuth } from "./auth";
+import { FAB_EMAIL_REGEX, STORAGE_KEYS } from "./constants";
+import { safeRedirect, getRedirectTo } from "./redirect";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,42 +30,11 @@ import { cn } from "~/utils/utils";
 
 import type { Route } from "./+types/login";
 
-const FAB_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@fab\.mil\.br$/;
-
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "Login - SISUB" },
     { name: "description", content: "Entrar no SISUB" },
   ];
-}
-
-// Extrai redirectTo da URL e faz sanitização para evitar open redirect
-function getRedirectTo(
-  locationSearch: string,
-  locationState?: any
-): string | null {
-  const params = new URLSearchParams(locationSearch);
-  const qsTarget = params.get("redirectTo");
-  const stateTarget = locationState?.from?.pathname as string | undefined;
-  return qsTarget ?? stateTarget ?? null;
-}
-
-function safeRedirect(
-  target: string | null | undefined,
-  fallback = "/rancho"
-): string {
-  if (!target) return fallback;
-  let decoded = target;
-  try {
-    decoded = decodeURIComponent(target);
-  } catch {
-    // mantém target original se falhar decode
-  }
-  // Permite apenas caminhos internos tipo "/alguma-coisa" (não "//dominio")
-  if (decoded.startsWith("/") && !decoded.startsWith("//")) {
-    return decoded;
-  }
-  return fallback;
 }
 
 export default function Login() {
@@ -83,6 +55,14 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const [passwordError, setPasswordError] = useState("");
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem(STORAGE_KEYS.rememberEmail);
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   // Redireciona se já estiver autenticado (respeita redirectTo/state.from)
   useEffect(() => {
@@ -126,9 +106,9 @@ export default function Login() {
     setRememberMe(checked);
 
     if (checked && email && FAB_EMAIL_REGEX.test(email)) {
-      localStorage.setItem("fab_remember_email", email);
+      localStorage.setItem(STORAGE_KEYS.rememberEmail, email);
     } else {
-      localStorage.removeItem("fab_remember_email");
+      localStorage.removeItem(STORAGE_KEYS.rememberEmail);
     }
   };
 

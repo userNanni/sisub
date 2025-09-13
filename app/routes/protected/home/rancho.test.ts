@@ -1,12 +1,12 @@
 import { describe, it, expect } from "@jest/globals";
 import {
-  UNIDADES_DISPONIVEIS,
   MEAL_TYPES,
   DEFAULT_UNIT,
   DAYS_TO_SHOW,
   NEAR_DATE_THRESHOLD,
 } from "../../../components/constants/rancho";
-
+import { useRancho } from "~/components/hooks/useRancho";
+const { ranchos: UNIDADES_DISPONIVEIS } = useRancho();
 describe("Rancho Constants", () => {
   describe("UNIDADES_DISPONIVEIS", () => {
     it("should have the correct structure for each unit", () => {

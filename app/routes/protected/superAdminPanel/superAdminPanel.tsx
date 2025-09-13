@@ -22,7 +22,6 @@ import {
   MoreHorizontal,
   PlusCircle,
   AlertCircle,
-  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,7 +65,8 @@ import {
 
 // Supabase e tipos
 import supabase from "@/utils/supabase";
-import { checkUserLevel, useAuth, userLevelType } from "@/auth/auth";
+import { checkUserLevel, UserLevelOrNull } from "@/auth/adminService";
+import { useAuth } from "@/auth/auth";
 import type { Route } from "./+types/superAdminPanel";
 
 // Rancho (OMs)
@@ -115,13 +115,13 @@ export type ProfileAdmin = {
   saram: string | null;
   name: string | null;
   email: string;
-  role: userLevelType;
+  role: UserLevelOrNull;
   om: string | null;
   created_at: string;
   updated_at: string;
 };
 
-type UserLevel = userLevelType;
+type UserLevel = UserLevelOrNull;
 
 export function meta({}: Route.MetaArgs) {
   return [

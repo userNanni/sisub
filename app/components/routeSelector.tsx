@@ -3,7 +3,7 @@
 "use client";
 
 import * as React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { Calendar, ScanQrCode } from "lucide-react";
 
 // Importações dos componentes ShadCN UI
@@ -16,10 +16,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { userLevelType } from "~/auth/auth";
+import type { UserLevelOrNull } from "~/auth/adminService";
 
 interface RouteSelectorProps {
-  userLevel: userLevelType;
+  userLevel: UserLevelOrNull;
 }
 
 // Definição das rotas e seus labels

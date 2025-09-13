@@ -10,13 +10,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { LogOut, User, Home, QrCode, X } from "lucide-react";
 import { useState, useEffect, useMemo, type JSX } from "react";
-import {
-  checkUserLevel,
-  userLevelType,
-  type AuthContextType,
-} from "~/auth/auth";
-import { QRCodeCanvas } from "qrcode.react";
-import { useLocation, useNavigate } from "react-router-dom"; // novo import
+import { checkUserLevel, UserLevelOrNull } from "~/auth/adminService";
+import { AuthContextType } from "~/auth/auth";
+import { QRCodeCanvas } from "qrcode.react"; // novo import
 import RouteSelector from "./routeSelector";
 
 interface RanchoHeaderProps {
@@ -30,7 +26,7 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
   useEffect(() => {
     setIsClient(true);
   }, []);
-  const [userLevel, setUserLevel] = useState<userLevelType>(null);
+  const [userLevel, setUserLevel] = useState<UserLevelOrNull>(null);
 
   useEffect(() => {
     const fetchUserLevel = async () => {

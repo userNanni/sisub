@@ -1,43 +1,20 @@
-import { Outlet, Navigate, useLocation } from "react-router-dom";
+// app/auth/layout.tsx
+import { useEffect } from "react";
+import { REDIRECT_KEY } from "./constants";
+import {
+  getRedirectCandidates,
+  preserveRedirectFromQuery,
+  safeRedirect,
+} from "./redirect";
+import { Outlet, Navigate, useLocation } from "react-router";
 import { useAuth } from "./auth";
 import { Loader2 } from "lucide-react";
-
-const REDIRECT_KEY = "auth:redirectTo";
-
-// Lê redirectTo da query e/ou do state
-function getRedirectCandidates(locationSearch: string, locationState?: any) {
-  const params = new URLSearchParams(locationSearch);
-  const qsTarget = params.get("redirectTo"); // /login?redirectTo=...
-  const stateFrom = locationState?.from;
-  const stateTarget =
-    stateFrom && typeof stateFrom === "object"
-      ? `${stateFrom.pathname ?? ""}${stateFrom.search ?? ""}`
-      : locationState?.from?.pathname || null; // compat
-  const stored = sessionStorage.getItem(REDIRECT_KEY);
-  return { qsTarget, stateTarget, stored };
-}
-
-function safeRedirect(
-  target: string | null | undefined,
-  fallback = "/rancho"
-): string {
-  if (!target) return fallback;
-  let decoded = target;
-  try {
-    decoded = decodeURIComponent(target);
-  } catch {
-    // mantém target original se falhar
-  }
-  // Aceita apenas caminhos internos tipo "/alguma-coisa" (não "//dominio")
-  if (decoded.startsWith("/") && !decoded.startsWith("//")) {
-    return decoded;
-  }
-  return fallback;
-}
 
 export default function AuthLayout() {
   const { user, isLoading } = useAuth();
   const location = useLocation();
+
+  preserveRedirectFromQuery(location.search, REDIRECT_KEY);
 
   const isResetPasswordRoute = location.pathname.startsWith(
     "/auth/reset-password"
@@ -51,6 +28,17 @@ export default function AuthLayout() {
   if (qsRedirect) {
     sessionStorage.setItem(REDIRECT_KEY, qsRedirect);
   }
+
+  useEffect(() => {
+    preserveRedirectFromQuery(location.search, REDIRECT_KEY);
+  }, [location.search]);
+
+  const { qsTarget, stateTarget, stored } = getRedirectCandidates(
+    location.search,
+    location.state,
+    REDIRECT_KEY
+  );
+  const target = safeRedirect(qsTarget ?? stored ?? stateTarget, "/rancho");
 
   // Loading: evita flicker
   if (isLoading) {
@@ -76,14 +64,6 @@ export default function AuthLayout() {
 
   // Se já estiver logado e não for a rota de reset de senha, redireciona
   if (user && !isResetPasswordRoute) {
-    const { qsTarget, stateTarget, stored } = getRedirectCandidates(
-      location.search,
-      location.state
-    );
-    // Prioridade: query > stored > state
-    const rawTarget = qsTarget ?? stored ?? stateTarget;
-    const target = safeRedirect(rawTarget, "/rancho");
-
     // Consumir o redirect salvo (para não vazar para próximos acessos)
     if (stored) sessionStorage.removeItem(REDIRECT_KEY);
 
