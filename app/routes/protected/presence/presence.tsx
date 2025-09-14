@@ -11,7 +11,7 @@ import supabase from "@/utils/supabase";
 
 // UI & Icons
 import { Button } from "@/components/ui/button";
-import { Camera, RefreshCw } from "lucide-react";
+import { Camera, RefreshCw, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import Filters from "~/components/Filters";
@@ -112,6 +112,7 @@ export default function Qr() {
   const [isProcessing, setIsProcessing] = useState(false);
   const dates = useMemo(() => generateRestrictedDates(), []);
   const defaultMeal = useMemo(() => inferDefaultMeal(), []);
+  const [isAddingOther, setIsAddingOther] = useState(false);
 
   const { user } = useAuth();
   const [shouldRedirect, setShouldRedirect] = useState(false);
@@ -178,6 +179,70 @@ export default function Qr() {
     systemForecast: null,
     willEnter: "sim",
   });
+
+  const addOtherPresence = useCallback(async () => {
+    if (!user?.id) {
+      toast.error("Erro", { description: "Usuário não autenticado." });
+      return;
+    }
+
+    // Use a ref para garantir que pegamos os filtros atuais
+    const { date, meal, unit } = currentFiltersRef.current;
+
+    if (!date || !meal || !unit) {
+      toast.error("Filtros incompletos", {
+        description: "Selecione data, refeição e unidade.",
+      });
+      return;
+    }
+
+    setIsAddingOther(true);
+    try {
+      const { error } = await supabase.from("others_presence").insert({
+        admin_id: user.id, // UUID do fiscal logado
+        date, // 'date' (tipo date no banco) no formato 'YYYY-MM-DD'
+        meal, // texto (ex.: 'cafe' | 'almoco' | 'jantar' | 'ceia')
+        unidade: unit, // texto da unidade
+      });
+
+      if (error) throw error;
+
+      toast.success("Outro registrado", {
+        description: "Entrada sem cadastro adicionada com sucesso.",
+      });
+
+      // Caso queira disparar alguma atualização na tela após inserir, faça aqui.
+      // Como está em outra tabela, não interfere em presences diretamente.
+    } catch (err: any) {
+      console.error("Erro ao registrar Outros:", err);
+      toast.error("Erro", {
+        description: "Não foi possível registrar a entrada.",
+      });
+    } finally {
+      await loadOthersCount();
+      setIsAddingOther(false);
+    }
+  }, [user?.id]);
+
+  const [othersCount, setOthersCount] = useState<number>(0);
+
+  const loadOthersCount = useCallback(async () => {
+    const { date, meal, unit } = currentFiltersRef.current;
+    if (!date || !meal || !unit) return;
+
+    const { error, count } = await supabase
+      .from("others_presence")
+      .select("*", { count: "exact", head: true })
+      .eq("date", date)
+      .eq("meal", meal)
+      .eq("unidade", unit);
+
+    if (!error) setOthersCount(count ?? 0);
+  }, []);
+
+  useEffect(() => {
+    loadOthersCount();
+  }, [filters.date, filters.meal, filters.unit, loadOthersCount]);
 
   const { presences, forecastMap, confirmPresence, removePresence } =
     usePresenceManagement(filters);
@@ -428,6 +493,17 @@ export default function Qr() {
               Limpar
             </Button>
           )}
+
+          {/* Botão "Outros" */}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={addOtherPresence}
+            disabled={isAddingOther}
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Outros {othersCount ? `(${othersCount})` : ""}
+          </Button>
         </div>
       </div>
 

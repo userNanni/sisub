@@ -28,7 +28,9 @@ export function usePresenceManagement(filters: FiscalFilters) {
 
     if (error) {
       console.error("Erro ao buscar presenças:", error);
-      toast.error("Erro", { description: "Não foi possível carregar as presenças." });
+      toast.error("Erro", {
+        description: "Não foi possível carregar as presenças.",
+      });
       return;
     }
     const rows = data || [];
@@ -65,50 +67,70 @@ export function usePresenceManagement(filters: FiscalFilters) {
   }, [loadPresence]);
 
   // Lógica para confirmar a presença de um militar
-  const confirmPresence = useCallback(async (uuid: string, willEnter: boolean) => {
-    if (!willEnter) {
-      toast.info("Registro atualizado", {
-        description: "Decisão registrada. Militar não entrará para a refeição.",
-      });
-      return;
-    }
-
-    if (!filters.unit) {
-      toast.error("Selecione a OM", { description: "É necessário informar a unidade." });
-      return;
-    }
-
-    const { error } = await supabase.from("rancho_presencas").insert({
-      user_id: uuid,
-      date: filters.date,
-      meal: filters.meal,
-      unidade: filters.unit,
-    });
-
-    if (error) {
-      if ((error as any).code === "23505") {
-        toast.info("Já registrado", { description: "Este militar já foi marcado presente." });
-      } else {
-        toast.error("Erro", { description: "Falha ao salvar decisão." });
-        throw error;
+  const confirmPresence = useCallback(
+    async (uuid: string, willEnter: boolean) => {
+      if (!willEnter) {
+        toast.info("Registro atualizado", {
+          description:
+            "Decisão registrada. Militar não entrará para a refeição.",
+        });
+        return;
       }
-    } else {
-      toast.success("Presença registrada", { description: `UUID ${uuid} marcado.` });
-      await loadPresence(); // Revalida os dados
-    }
-  }, [filters, loadPresence]);
+
+      if (!filters.unit) {
+        toast.error("Selecione a OM", {
+          description: "É necessário informar a unidade.",
+        });
+        return;
+      }
+
+      const { error } = await supabase.from("rancho_presencas").insert({
+        user_id: uuid,
+        date: filters.date,
+        meal: filters.meal,
+        unidade: filters.unit,
+      });
+
+      if (error) {
+        if ((error as any).code === "23505") {
+          toast.info("Já registrado", {
+            description: "Este militar já foi marcado presente.",
+          });
+        } else {
+          toast.error("Erro", { description: "Falha ao salvar decisão." });
+          throw error;
+        }
+      } else {
+        toast.success("Presença registrada", {
+          description: `UUID ${uuid} marcado.`,
+        });
+        await loadPresence(); // Revalida os dados
+      }
+    },
+    [filters, loadPresence]
+  );
+
+  
 
   // Lógica para remover uma presença
-  const removePresence = useCallback(async (row: PresenceRecord) => {
-    const { error } = await supabase.from("rancho_presencas").delete().match({ id: row.id });
+  const removePresence = useCallback(
+    async (row: PresenceRecord) => {
+      const { error } = await supabase
+        .from("rancho_presencas")
+        .delete()
+        .match({ id: row.id });
 
-    if (error) {
-      toast.error("Erro", { description: "Não foi possível excluir." });
-      return;
-    }
-    toast.success("Excluído", { description: "Registro removido." });
-    await loadPresence(); // Revalida os dados
-  }, [loadPresence]);
+      if (error) {
+        toast.error("Erro", { description: "Não foi possível excluir." });
+        return;
+      }
+      toast.success("Excluído", { description: "Registro removido." });
+      await loadPresence(); // Revalida os dados
+    },
+    [loadPresence]
+  );
 
   return { presences, forecastMap, confirmPresence, removePresence };
 }
+
+
