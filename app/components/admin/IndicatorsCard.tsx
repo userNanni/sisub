@@ -7,7 +7,7 @@ export default function IndicatorsCard() {
   const toggleExpanded = () => setExpanded((e) => !e);
 
   const powerBiUrl =
-    "https://app.powerbi.com/view?r=eyJrIjoiMmQxYjdlMDYtZmE5MC00N2QwLTgxYmItMjRlNWVmMjA3MjgzIiwidCI6ImViMjk0Zjg5LTUwNWUtNDI4MC1iYjdiLTFlMzlhZjg5YTg4YyJ9";
+    "https://app.powerbi.com/view?r=eyJrIjoiMmQ1MzAxY2UtZGU5ZS00ZjA3LTlmOTQtZWU2N2RhMmQxNjg2IiwidCI6IjNhMzY0ZGI2LTg2NmEtNDRkOS1iMzY5LWM1ODk1OWQ0NDhmOCJ9";
 
   return (
     <div

@@ -1,4 +1,4 @@
-import type { Route } from "./+types/apiRancho";
+import type { Route } from "./+types/apiPresence";
 import supabase from "../utils/supabase";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -13,18 +13,18 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     // Buscar dados da view agregada (muito mais eficiente)
     const { data: ranchoData, error } = await supabase
-      .from("rancho_agregado")
+      .from("rancho_presencas_agregado")
       .select(
         `
-        data,
+        date,
         unidade,
-        refeicao,
-        total_vai_comer
+        meal,
+        total
       `
       )
-      .order("data", { ascending: false })
+      .order("date", { ascending: false })
       .order("unidade", { ascending: true })
-      .order("refeicao", { ascending: true });
+      .order("meal", { ascending: true });
 
     if (error) {
       console.error("Erro ao buscar dados do rancho:", error);
@@ -40,8 +40,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     // Calcular estatísticas adicionais (agora muito mais rápido)
     const totalRecords = ranchoData?.length || 0;
     const totalPessoasComendo =
-      ranchoData?.reduce((sum, item) => sum + item.total_vai_comer, 0) || 0;
-    const totalDias = new Set(ranchoData?.map((item) => item.data)).size;
+      ranchoData?.reduce((sum, item) => sum + item.total, 0) || 0;
+    const totalDias = new Set(ranchoData?.map((item) => item.date)).size;
     const totalUnidades = new Set(ranchoData?.map((item) => item.unidade)).size;
 
     // Retornar dados agregados com metadados úteis para Power BI

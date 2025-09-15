@@ -29,4 +29,5 @@ export default [
 
   // Nova rota API para Power BI
   route("api/rancho", "./routes/apiRancho.tsx"),
+  route("api/presences", "./routes/apiPresence.tsx"),
 ] satisfies RouteConfig;
