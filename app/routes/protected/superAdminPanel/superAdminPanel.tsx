@@ -229,6 +229,7 @@ export default function SuperAdminPanel() {
                 </div>
                 <Switch
                   id="evaluation-active"
+                  className="cursor-pointer"
                   checked={evalConfig.active}
                   onCheckedChange={(v: boolean) =>
                     setEvalConfig((prev) => ({ ...prev, active: v }))

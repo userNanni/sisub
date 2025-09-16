@@ -13,8 +13,7 @@ import {
   Settings,
   RefreshCw,
   Save,
-  CalendarCheck,
-  UtensilsCrossed, // Novo ícone
+  UtensilsCrossed,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,7 @@ import {
 import { NEAR_DATE_THRESHOLD } from "@/components/constants/rancho";
 import { DayCardSkeleton } from "~/components/rancho/DayCard";
 import SimplifiedMilitaryStatsSkeleton from "~/components/rancho/SimplifiedMilitaryStatsSkeleton";
-import BulkMealSelector from "~/components/rancho/BulkMealSelector"; // Novo import
+import BulkMealSelector from "~/components/rancho/BulkMealSelector";
 import type { Route } from "./+types/rancho";
 
 const SimplifiedMilitaryStats = lazy(
@@ -47,7 +46,7 @@ const SimplifiedMilitaryStats = lazy(
 const DayCard = lazy(() => import("~/components/rancho/DayCard"));
 
 /* ============================
-   Constantes e utilitários puros
+   Constantes, utilitários e helpers de texto
    ============================ */
 
 const DIRAD_UNIT = "DIRAD" as const;
@@ -62,6 +61,15 @@ interface CardData {
   daySelections: DayMeals;
   dayUnit: string;
 }
+
+// Pluralização simples
+const pluralize = (count: number, singular: string, plural: string) =>
+  count === 1 ? singular : plural;
+
+const labelAlteracao = (n: number) => pluralize(n, "alteração", "alterações");
+const labelCard = (n: number) => pluralize(n, "card", "cards");
+const labelDiaUtil = (n: number) => pluralize(n, "dia útil", "dias úteis");
+const labelTem = (n: number) => pluralize(n, "tem", "têm"); // concordância verbal
 
 // Função pura para calcular dados do card (sem hooks)
 const getDayCardData = (
@@ -86,7 +94,6 @@ const getDayCardData = (
 };
 
 const isWeekday = (dateString: string): boolean => {
-  // Evitar problemas de timezone adicionando T00:00:00
   const d = new Date(`${dateString}T00:00:00`);
   const dow = d.getDay(); // 0=Dom, 1=Seg, ..., 6=Sáb
   return dow >= 1 && dow <= 5;
@@ -129,7 +136,7 @@ export default function Rancho(): JSX.Element {
   const [showDefaultUnitSelector, setShowDefaultUnitSelector] = useState(false);
   const [isApplyingDefaultUnit, setIsApplyingDefaultUnit] = useState(false);
 
-  // Novo: controle do seletor de refeições em massa
+  // Seletor de refeições em massa
   const [showBulkMealSelector, setShowBulkMealSelector] = useState(false);
   const [isApplyingMealTemplate, setIsApplyingMealTemplate] = useState(false);
 
@@ -137,7 +144,6 @@ export default function Rancho(): JSX.Element {
      Derivações e memos
      ============================ */
 
-  // Dias úteis não "próximos" (critérios para ações em massa por padrão)
   const weekdayTargets = useMemo(
     () =>
       dates.filter(
@@ -153,7 +159,6 @@ export default function Rancho(): JSX.Element {
     }).length;
   }, [weekdayTargets, selections]);
 
-  // Computa dados agregados usados em vários lugares
   const computedData = useMemo(() => {
     const cardsWithoutUnit = dates.filter((date) => {
       const unit = dayUnits[date];
@@ -169,7 +174,6 @@ export default function Rancho(): JSX.Element {
     return { cardsWithoutUnit, cardData };
   }, [dates, dayUnits, selections, defaultUnit]);
 
-  // Pré-computar props dos cards
   const dayCardsProps = useMemo(() => {
     return computedData.cardData.map(({ date, daySelections, dayUnit }) => {
       const dayCardData = getDayCardData(date, todayString, daySelections);
@@ -198,7 +202,6 @@ export default function Rancho(): JSX.Element {
       const newValue = !currentValue;
       const unidade = dayUnits[date] || defaultUnit;
 
-      // Corrige possível spread de undefined
       setSelections((prev: Selections) => {
         const existing = prev[date] ?? createEmptyDayMeals();
         return {
@@ -303,8 +306,11 @@ export default function Rancho(): JSX.Element {
         });
       }
 
+      // Pluralização de "card"
       setSuccess(
-        `Unidade padrão "${defaultUnit}" aplicada a ${cardsWithoutUnit.length} card(s)!`
+        `Unidade padrão "${defaultUnit}" aplicada a ${
+          cardsWithoutUnit.length
+        } ${labelCard(cardsWithoutUnit.length)}!`
       );
       setShowDefaultUnitSelector(false);
     } catch (err) {
@@ -324,13 +330,12 @@ export default function Rancho(): JSX.Element {
     setError,
   ]);
 
-  // Aplicar template de refeições em massa (fill-missing | override) somente em dias úteis por padrão
   const applyMealTemplateToAll = useCallback(
     async (
       template: DayMeals,
       options: { mode: "fill-missing" | "override" }
     ): Promise<void> => {
-      const targetDates = weekdayTargets; // dias úteis não próximos
+      const targetDates = weekdayTargets;
       if (!targetDates.length) {
         setShowBulkMealSelector(false);
         return;
@@ -346,12 +351,10 @@ export default function Rancho(): JSX.Element {
           const after: DayMeals = { ...before };
 
           if (options.mode === "override") {
-            // força o template em todos os meals (e desmarca os que não estão no template)
             (Object.keys(after) as (keyof DayMeals)[]).forEach((k) => {
               after[k] = Boolean(template[k]);
             });
           } else {
-            // fill-missing: só marca onde estava false e o template pede true
             (Object.keys(after) as (keyof DayMeals)[]).forEach((k) => {
               if (template[k]) after[k] = after[k] || true;
             });
@@ -362,7 +365,6 @@ export default function Rancho(): JSX.Element {
               ? dayUnits[date]
               : defaultUnit;
 
-          // Gerar PendingChanges para qualquer alteração (true ou false)
           (Object.keys(after) as (keyof DayMeals)[]).forEach((k) => {
             if (after[k] !== before[k]) {
               newChanges.push({
@@ -385,7 +387,6 @@ export default function Rancho(): JSX.Element {
           return;
         }
 
-        // Atualiza selections
         setSelections((prev) => {
           const next: Selections = { ...prev };
           targetDates.forEach((date) => {
@@ -394,7 +395,6 @@ export default function Rancho(): JSX.Element {
           return next;
         });
 
-        // Atualiza pendingChanges (remove duplicadas por date+meal)
         setPendingChanges((prev) => {
           const toRemove = new Set(
             newChanges.map((c) => `${c.date}|${String(c.meal)}`)
@@ -405,10 +405,18 @@ export default function Rancho(): JSX.Element {
           return [...filtered, ...newChanges];
         });
 
+        // Pluralização de dia útil e alteração
+        const diasStr = `${targetDates.length} ${labelDiaUtil(
+          targetDates.length
+        )}`;
+        const alteracoesStr = `${newChanges.length} ${labelAlteracao(
+          newChanges.length
+        )}`;
+
         setSuccess(
-          `Template de refeições aplicado a ${targetDates.length} dia(s) úteis no modo ${
+          `Template de refeições aplicado a ${diasStr} no modo ${
             options.mode === "override" ? "sobrescrever" : "preencher"
-          }: ${newChanges.length} alteração(ões).`
+          }: ${alteracoesStr}.`
         );
         setShowBulkMealSelector(false);
       } catch (err) {
@@ -436,8 +444,8 @@ export default function Rancho(): JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-screen-2xl w-full">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Carregando previsões...</p>
         </div>
@@ -452,122 +460,161 @@ export default function Rancho(): JSX.Element {
      ============================ */
 
   return (
-    <div className="space-y-6 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 container mx-auto max-w-screen-2xl px-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleUnitSelector}
-            className="text-orange-600 border-orange-600 hover:bg-orange-50 cursor-pointer"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Unidade Padrão ({cardsWithoutUnit.length})
-          </Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 md:px-8 py-4 sm:py-6 space-y-6">
+        {/* Header */}
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-lg sm:text-xl font-semibold text-gray-800">
+            Previsão SISUB
+          </h1>
 
-          {/* Novo botão: Refeições em Massa (mostra quantidade de dias úteis que serão afetados) */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowBulkMealSelector(!showBulkMealSelector)}
-            disabled={isLoading}
-            className="text-green-600 border-green-600 hover:bg-green-50 cursor-pointer"
-          >
-            <UtensilsCrossed className="h-4 w-4 mr-2" />
-            Refeições em Massa ({weekdayTargets.length})
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleUnitSelector}
+              className="text-orange-600 border-orange-600 hover:bg-orange-50 cursor-pointer"
+              aria-label="Definir unidade padrão"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Unidade Padrão ({cardsWithoutUnit.length})
+            </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className="cursor-pointer"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-            />
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowBulkMealSelector(!showBulkMealSelector)}
+              disabled={isLoading}
+              className="text-green-600 border-green-600 hover:bg-green-50 cursor-pointer"
+              aria-label="Aplicar refeições em massa"
+            >
+              <UtensilsCrossed className="h-4 w-4 mr-2" />
+              Refeições em Massa ({weekdayTargets.length})
+            </Button>
 
-      {/* Seletor de Unidade Padrão */}
-      {showDefaultUnitSelector && (
-        <DefaultUnitSelector
-          defaultUnit={defaultUnit}
-          setDefaultUnit={setDefaultUnit}
-          cardsWithoutUnit={cardsWithoutUnit}
-          onApply={applyDefaultUnitToAll}
-          onCancel={handleCancelUnitSelector}
-          isApplying={isApplyingDefaultUnit}
-        />
-      )}
-
-      {/* Novo: Seletor de Refeições em Massa (usa somente dias úteis não próximos) */}
-      {showBulkMealSelector && (
-        <BulkMealSelector
-          targetDates={weekdayTargets} // dias úteis por padrão
-          initialTemplate={{ cafe: true, almoco: true }} // padrão útil inicial
-          onApply={applyMealTemplateToAll}
-          onCancel={() => setShowBulkMealSelector(false)}
-          isApplying={isApplyingMealTemplate}
-        />
-      )}
-
-      <div className="min-h-10">
-        {/* Alertas */}
-        <AlertMessages
-          success={success}
-          error={error}
-          onClearMessages={clearMessages}
-        />
-
-        {/* Status de salvamento */}
-        <PendingChangesStatus
-          pendingChanges={pendingChanges}
-          isSavingBatch={isSavingBatch}
-        />
-      </div>
-
-      {/* Estatísticas Militares */}
-      <Suspense fallback={<SimplifiedMilitaryStatsSkeleton />}>
-        <SimplifiedMilitaryStats selections={selections} dates={dates} />
-      </Suspense>
-
-      {/* Cards Container */}
-      <div className="overflow-x-auto pb-4">
-        <div className="flex space-x-4 min-w-max p-2">
-          {dayCardsProps.map((cardProps) => (
-            <Suspense fallback={<DayCardSkeleton />} key={cardProps.key}>
-              <DayCard
-                {...cardProps}
-                onMealToggle={handleMealToggle}
-                onUnitChange={handleUnitChange}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="cursor-pointer"
+              aria-label="Recarregar previsões"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
               />
+            </Button>
+          </div>
+        </header>
+
+        {/* Controles */}
+        <section className="space-y-4">
+          {showDefaultUnitSelector && (
+            <div className="rounded-lg border bg-white shadow-sm">
+              <div className="p-4 sm:p-5">
+                <DefaultUnitSelector
+                  defaultUnit={defaultUnit}
+                  setDefaultUnit={setDefaultUnit}
+                  cardsWithoutUnit={cardsWithoutUnit}
+                  onApply={applyDefaultUnitToAll}
+                  onCancel={handleCancelUnitSelector}
+                  isApplying={isApplyingDefaultUnit}
+                />
+              </div>
+            </div>
+          )}
+
+          {showBulkMealSelector && (
+            <div className="rounded-lg border bg-white shadow-sm">
+              <div className="p-4 sm:p-5">
+                <BulkMealSelector
+                  targetDates={weekdayTargets}
+                  initialTemplate={{ cafe: true, almoco: true }}
+                  onApply={applyMealTemplateToAll}
+                  onCancel={() => setShowBulkMealSelector(false)}
+                  isApplying={isApplyingMealTemplate}
+                />
+                {weekdayTargetsNeedingFillCount > 0 && (
+                  <p className="mt-3 text-xs text-gray-500">
+                    Dica: {weekdayTargetsNeedingFillCount}{" "}
+                    {labelDiaUtil(weekdayTargetsNeedingFillCount)}{" "}
+                    {labelTem(weekdayTargetsNeedingFillCount)} refeições
+                    faltando no template.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Alertas e status */}
+        <section className="space-y-3">
+          <AlertMessages
+            success={success}
+            error={error}
+            onClearMessages={clearMessages}
+          />
+          <PendingChangesStatus
+            pendingChanges={pendingChanges}
+            isSavingBatch={isSavingBatch}
+          />
+        </section>
+
+        {/* Estatísticas */}
+        <section className="rounded-lg border bg-white shadow-sm">
+          <div className="p-4 sm:p-5">
+            <Suspense fallback={<SimplifiedMilitaryStatsSkeleton />}>
+              <SimplifiedMilitaryStats selections={selections} dates={dates} />
             </Suspense>
-          ))}
-        </div>
+          </div>
+        </section>
+
+        {/* Cards */}
+        <section>
+          <div className="overflow-x-auto pb-2 -mx-2 px-2">
+            <div className="flex space-x-4 min-w-max p-1 snap-x snap-mandatory">
+              {dayCardsProps.map((cardProps) => (
+                <Suspense fallback={<DayCardSkeleton />} key={cardProps.key}>
+                  <div className="snap-start">
+                    <DayCard
+                      {...cardProps}
+                      onMealToggle={handleMealToggle}
+                      onUnitChange={handleUnitChange}
+                    />
+                  </div>
+                </Suspense>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
 
-      {/* Botão de salvar manual */}
-      {pendingChanges.length > 0 && (
-        <div className="fixed bottom-6 right-6">
-          <Button
-            onClick={savePendingChanges}
-            disabled={isSavingBatch}
-            className="shadow-lg cursor-pointer"
-            size="lg"
-          >
-            {isSavingBatch ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Salvar {pendingChanges.length} alteração(ões)
-          </Button>
+      {/* Botão de salvar */}
+      {/* {pendingChanges.length > 0 && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 px-4 w-full sm:w-auto">
+          <div className="mx-auto max-w-screen-2xl">
+            <div className="flex justify-center">
+              <Button
+                onClick={savePendingChanges}
+                disabled={isSavingBatch}
+                className="shadow-lg cursor-pointer w-full sm:w-auto"
+                size="lg"
+                aria-label={`Salvar ${pendingChanges.length} ${labelAlteracao(
+                  pendingChanges.length
+                )}`}
+              >
+                {isSavingBatch ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Salvar {pendingChanges.length}{" "}
+                {labelAlteracao(pendingChanges.length)}
+              </Button>
+            </div>
+          </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

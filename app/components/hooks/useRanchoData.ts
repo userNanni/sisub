@@ -66,8 +66,8 @@ const createEmptyDayMeals = (): DayMeals => ({
 const toYYYYMMDD = (date: Date): string => {
   const year = date.getFullYear();
   // getMonth() é 0-indexado (0-11), então somamos 1
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
@@ -83,6 +83,15 @@ const generateDates = (days: number): string[] => {
 
   return dates;
 };
+
+// Helpers de pluralização
+const pluralize = (count: number, singular: string, plural: string) =>
+  count === 1 ? singular : plural;
+
+const labelAlteracao = (n: number) => pluralize(n, "alteração", "alterações");
+const labelSalva = (n: number) => pluralize(n, "salva", "salvas");
+const labelFalhou = (n: number) => pluralize(n, "falhou", "falharam");
+const labelOperacao = (n: number) => pluralize(n, "operação", "operações");
 
 export const useRanchoData = (): RanchoDataHook => {
   const { user } = useAuth();
@@ -115,7 +124,7 @@ export const useRanchoData = (): RanchoDataHook => {
 
   const setSuccess = useCallback((msg: string) => {
     setSuccessState(msg);
-    setError(""); 
+    setError("");
 
     if (successTimerRef.current) {
       clearTimeout(successTimerRef.current);
@@ -188,7 +197,9 @@ export const useRanchoData = (): RanchoDataHook => {
     } catch (err) {
       if (!signal.aborted) {
         console.error("Erro ao carregar previsões:", err);
-        setErrorWithClear("Erro ao carregar previsões existentes. Tente novamente.");
+        setErrorWithClear(
+          "Erro ao carregar previsões existentes. Tente novamente."
+        );
       }
     } finally {
       if (!signal.aborted) {
@@ -215,11 +226,14 @@ export const useRanchoData = (): RanchoDataHook => {
         const changesToSave = [...pendingChanges];
 
         // Agrupar mudanças por data e refeição para evitar operações duplicadas
-        const changesByDateAndMeal = changesToSave.reduce((acc, change) => {
-          const key = `${change.date}-${change.meal}`;
-          acc[key] = change;
-          return acc;
-        }, {} as { [key: string]: PendingChange });
+        const changesByDateAndMeal = changesToSave.reduce(
+          (acc, change) => {
+            const key = `${change.date}-${change.meal}`;
+            acc[key] = change;
+            return acc;
+          },
+          {} as { [key: string]: PendingChange }
+        );
 
         // Processar cada mudança individualmente com operações específicas
         const results = await Promise.allSettled(
@@ -229,21 +243,27 @@ export const useRanchoData = (): RanchoDataHook => {
                 // Se vai_comer = true, fazer upsert (insert ou update)
                 const { error: upsertError } = await supabase
                   .from("rancho_previsoes")
-                  .upsert({
-                    data: change.date,
-                    unidade: change.unidade,
-                    user_id: user.id,
-                    refeicao: change.meal,
-                    vai_comer: true,
-                  }, {
-                    onConflict: 'user_id,data,refeicao',
-                    ignoreDuplicates: false
-                  });
+                  .upsert(
+                    {
+                      data: change.date,
+                      unidade: change.unidade,
+                      user_id: user.id,
+                      refeicao: change.meal,
+                      vai_comer: true,
+                    },
+                    {
+                      onConflict: "user_id,data,refeicao",
+                      ignoreDuplicates: false,
+                    }
+                  );
 
                 if (upsertError) {
                   // Fallback: Se upsert falhar, tentar delete + insert
-                  console.warn(`Upsert falhou para ${change.date}-${change.meal}, tentando delete+insert:`, upsertError);
-                  
+                  console.warn(
+                    `Upsert falhou para ${change.date}-${change.meal}, tentando delete+insert:`,
+                    upsertError
+                  );
+
                   await supabase
                     .from("rancho_previsoes")
                     .delete()
@@ -274,72 +294,93 @@ export const useRanchoData = (): RanchoDataHook => {
 
                 if (deleteError) {
                   // Se o erro for "registro não encontrado", não é um erro crítico
-                  if (!deleteError.message.includes('No rows deleted')) {
+                  if (!deleteError.message.includes("No rows deleted")) {
                     throw deleteError;
                   }
                 }
               }
 
-              return { 
-                success: true, 
+              return {
+                success: true,
                 change,
-                operation: change.value ? 'upsert' : 'delete'
+                operation: change.value ? "upsert" : "delete",
               };
             } catch (error) {
-              console.error(`Erro ao processar mudança para ${change.date}-${change.meal}:`, error);
-              return { 
-                success: false, 
-                change, 
-                error: error instanceof Error ? error.message : 'Erro desconhecido'
+              console.error(
+                `Erro ao processar mudança para ${change.date}-${change.meal}:`,
+                error
+              );
+              return {
+                success: false,
+                change,
+                error:
+                  error instanceof Error ? error.message : "Erro desconhecido",
               };
             }
           })
         );
 
         // Processar resultados e dar feedback detalhado
-        const successful = results.filter((result) => 
-          result.status === "fulfilled" && result.value.success
-        );
-        const failed = results.filter((result) => 
-          result.status === "rejected" || 
-          (result.status === "fulfilled" && !result.value.success)
+        const successful = results.filter(
+          (result) => result.status === "fulfilled" && result.value.success
+        ) as PromiseFulfilledResult<{
+          success: boolean;
+          change: PendingChange;
+        }>[];
+
+        const failed = results.filter(
+          (result) =>
+            result.status === "rejected" ||
+            (result.status === "fulfilled" && !result.value.success)
         );
 
         if (failed.length === 0) {
           // Todas as operações foram bem-sucedidas
-          setSuccess(`${changesToSave.length} alteração(ões) salva(s) com sucesso!`);
-          
+          const n = changesToSave.length;
+          setSuccess(`${n} ${labelAlteracao(n)} ${labelSalva(n)} com sucesso!`);
+
           // Remover apenas as mudanças que foram processadas com sucesso
-          setPendingChanges((prev) => 
-            prev.filter(change => !changesToSave.some(saved => 
-              saved.date === change.date && 
-              saved.meal === change.meal && 
-              saved.value === change.value &&
-              saved.unidade === change.unidade
-            ))
+          setPendingChanges((prev) =>
+            prev.filter(
+              (change) =>
+                !changesToSave.some(
+                  (saved) =>
+                    saved.date === change.date &&
+                    saved.meal === change.meal &&
+                    saved.value === change.value &&
+                    saved.unidade === change.unidade
+                )
+            )
           );
         } else if (successful.length > 0) {
           // Algumas operações falharam, mas outras foram bem-sucedidas
-          setSuccess(`${successful.length} alteração(ões) salva(s). ${failed.length} falharam.`);
-          
-          // Remover apenas as mudanças que foram salvas com sucesso
-          const successfulChanges = successful.map(result => 
-            (result as PromiseFulfilledResult<any>).value.change
+          const nOk = successful.length;
+          const nFail = failed.length;
+
+          setSuccess(
+            `${nOk} ${labelAlteracao(nOk)} ${labelSalva(nOk)}. ${nFail} ${labelAlteracao(
+              nFail
+            )} ${labelFalhou(nFail)}.`
           );
-          
+
+          // Remover apenas as mudanças que foram salvas com sucesso
+          const successfulChanges = successful.map((r) => r.value.change);
+
           setPendingChanges((prev) =>
-            prev.filter((change) => 
-              !successfulChanges.some(successful => 
-                successful.date === change.date && 
-                successful.meal === change.meal &&
-                successful.value === change.value &&
-                successful.unidade === change.unidade
-              )
+            prev.filter(
+              (change) =>
+                !successfulChanges.some(
+                  (ok) =>
+                    ok.date === change.date &&
+                    ok.meal === change.meal &&
+                    ok.value === change.value &&
+                    ok.unidade === change.unidade
+                )
             )
           );
 
           // Log detalhado dos erros para debug
-          failed.forEach(result => {
+          failed.forEach((result) => {
             if (result.status === "fulfilled") {
               console.error("Erro na operação:", result.value.error);
             } else {
@@ -348,21 +389,35 @@ export const useRanchoData = (): RanchoDataHook => {
           });
         } else {
           // Todas as operações falharam
-          const errorMessages = failed.map(result => {
-            if (result.status === "fulfilled") {
-              return result.value.error;
-            } else {
-              return result.reason?.message || 'Erro desconhecido';
-            }
-          }).join(', ');
-          
-          throw new Error(`Todas as ${changesToSave.length} operações falharam: ${errorMessages}`);
+          const errorMessages = failed
+            .map((result) => {
+              if (result.status === "fulfilled") {
+                return (result as PromiseFulfilledResult<any>).value.error;
+              } else {
+                return (
+                  (result as PromiseRejectedResult).reason?.message ||
+                  "Erro desconhecido"
+                );
+              }
+            })
+            .join(", ");
+
+          const count = changesToSave.length;
+          if (count === 1) {
+            throw new Error(
+              `A ${labelOperacao(count)} ${labelFalhou(count)}: ${errorMessages}`
+            );
+          } else {
+            throw new Error(
+              `Todas as ${count} ${labelOperacao(count)} ${labelFalhou(count)}: ${errorMessages}`
+            );
+          }
         }
       } catch (err) {
         console.error("Erro crítico ao salvar mudanças:", err);
         setErrorWithClear(
-          err instanceof Error 
-            ? `Erro ao salvar alterações: ${err.message}` 
+          err instanceof Error
+            ? `Erro ao salvar ${labelAlteracao(1)}: ${err.message}` // "alteração" como conceito
             : "Erro ao salvar alterações. Tente novamente."
         );
       } finally {
