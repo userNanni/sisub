@@ -20,11 +20,11 @@ export default [
     route("rancho", "./routes/protected/home/rancho.tsx"),
     route("checkin", "./routes/protected/home/selfCheckIn.tsx"),
     route("fiscal", "./routes/protected/presence/presence.tsx"),
+    route("admin", "./routes/protected/adminPanel/adminPanel.tsx"),
     route(
       "superadmin",
       "./routes/protected/superAdminPanel/superAdminPanel.tsx"
     ),
-    route("admin", "./routes/protected/adminPanel/adminPanel.tsx"),
   ]),
 
   // Nova rota API para Power BI

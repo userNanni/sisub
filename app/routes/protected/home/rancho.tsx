@@ -452,7 +452,7 @@ export default function Rancho(): JSX.Element {
      ============================ */
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 container mx-auto max-w-screen-2xl px-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center space-x-4">

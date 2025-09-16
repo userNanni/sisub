@@ -443,7 +443,7 @@ export default function Qr() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 container mx-auto max-w-screen-2xl px-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
         <Filters
           selectedDate={filters.date}
