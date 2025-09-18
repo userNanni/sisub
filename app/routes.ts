@@ -31,4 +31,5 @@ export default [
   route("api/rancho", "./routes/apiRancho.tsx"),
   route("api/presences", "./routes/apiPresence.tsx"),
   route("api/opinion", "./routes/apiEvaluation.tsx"),
+  route("api/wherewhowhen", "./routes/apiWhereWhoWhen.tsx"),
 ] satisfies RouteConfig;
