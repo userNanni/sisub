@@ -20,9 +20,9 @@ export async function checkUserLevel(
       return null;
     }
 
-    // Se não houver registro, por padrão trate como 'user' (ajuste conforme sua regra)
+    // Se não houver registro, por padrão trate como null (ajuste conforme sua regra)
     if (!data) {
-      return "user";
+      return null;
     }
 
     if (
@@ -32,7 +32,7 @@ export async function checkUserLevel(
     ) {
       return data.role;
     }
-    return "user";
+    return null;
   } catch (e) {
     console.error("Erro inesperado ao verificar o nível do usuário:", e);
     return null;
