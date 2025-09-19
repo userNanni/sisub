@@ -11,7 +11,7 @@ import React, {
 } from "react";
 import supabase from "@/utils/supabase";
 import { type User, type Session } from "@supabase/supabase-js";
-import { useLocation, useNavigate, SessionStorage } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 
 export interface AuthContextType {
   user: User | null;

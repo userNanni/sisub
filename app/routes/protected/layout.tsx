@@ -21,6 +21,20 @@ type EvaluationResult = {
   question: string | null;
 };
 
+async function syncIdEmail(user: User) {
+  try {
+    const { error } = await supabase.from("user_email").upsert(
+      {
+        id: user.id,
+        email: user.email,
+      },
+      { onConflict: "id" }
+    );
+  } catch (e) {
+    console.error("Erro ao sincronizar usuário:", e);
+  }
+}
+
 async function fetchEvaluationForUser(
   userId: User["id"]
 ): Promise<EvaluationResult> {
@@ -67,6 +81,11 @@ export default function ProtectedLayout() {
   const navigate = useNavigate();
   const { user, isLoading, refreshSession, signOut } = useAuth();
   const location = useLocation();
+  useEffect(() => {
+    if (user) {
+      syncIdEmail(user).catch(() => {});
+    }
+  }, [user]);
 
   // Hooks sempre no topo
   const attemptedRecoveryRef = useRef(false);
