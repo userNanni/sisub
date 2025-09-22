@@ -211,16 +211,10 @@ export const useRequireAuth = () => {
   return { isAuthenticated, isLoading };
 };
 
-// Simplified role hook - can be extended later if needed
 export const useUserInfo = () => {
   const { user, isLoading } = useAuth();
-
-  // You can extract role from user metadata if stored there
-  const userRole = user?.user_metadata?.role || "user";
-
   return {
     user,
-    userRole: userRole as "admin" | "user",
     isLoading,
     email: user?.email,
     id: user?.id,

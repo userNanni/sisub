@@ -29,6 +29,22 @@ import { useAuth } from "~/auth/auth";
 import { checkUserLevel } from "~/auth/adminService";
 import { Navigate } from "react-router";
 
+// ===== NOVO: Regex de UUID e helper de extração =====
+// Aceita UUIDs v1–v5, com variantes 8|9|a|b, case-insensitive, e funciona se o QR "contiver" um UUID.
+const UUID_REGEX =
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
+
+// Se quiser exigir que TODO o conteúdo do QR seja apenas o UUID, use esta versão e troque no extractUuid:
+// const UUID_FULL_MATCH = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function extractUuid(payload: string): string | null {
+  if (!payload) return null;
+  const match = payload.match(UUID_REGEX);
+  // Para exigir match completo, troque a linha acima por:
+  // const match = payload.match(UUID_FULL_MATCH);
+  return match ? match[0].toLowerCase() : null;
+}
+
 // Tipos de estado e ação para o scanner
 interface ScannerState {
   isReady: boolean;
@@ -307,8 +323,16 @@ export default function Qr() {
 
   // 2) Antirreentrância + cooldown + cache + pausa do scanner durante o processamento
   const onScanSuccess = async (result: QrScanner.ScanResult) => {
-    const uuid = (result?.data || "").trim();
-    if (!uuid) return;
+    const raw = (result?.data || "").trim();
+    if (!raw) return;
+
+    // NOVO: só continue se houver um UUID no conteúdo do QR
+    const uuid = extractUuid(raw);
+    if (!uuid) {
+      // Sem UUID válido: ignore silenciosamente (sem cooldown).
+      // Opcional: pode exibir um toast com throttling se quiser feedback.
+      return;
+    }
 
     const now = Date.now();
     if (now - lastScanAtRef.current < COOLDOWN_MS) return;
