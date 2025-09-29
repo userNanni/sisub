@@ -275,7 +275,7 @@ export default function ProtectedLayout() {
   }
 
   // Rotas que precisam de "full-bleed"
-  const fullBleedRoutes = ["/rancho", "fiscal", "/admin", "/superadmin"];
+  const fullBleedRoutes = ["/rancho", "/fiscal", "/admin", "/superadmin"];
   const isFullBleed = fullBleedRoutes.some((p) =>
     location.pathname.startsWith(p)
   );

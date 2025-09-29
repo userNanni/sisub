@@ -484,46 +484,58 @@ export default function Qr() {
           }
           dates={dates}
         />
-        <div className="flex items-center gap-2">
-          <Switch
-            id="autoClose"
-            checked={autoCloseDialog}
-            onCheckedChange={setAutoCloseDialog}
-          />
-          <Label htmlFor="autoClose">
-            {autoCloseDialog ? "Fechar Auto." : "Fechar Manual"}
-          </Label>
+        <div className="w-full sm:w-auto flex flex-wrap items-center gap-2 sm:justify-end">
+          <div className="flex items-center gap-2 shrink-0">
+            <Switch
+              id="autoClose"
+              checked={autoCloseDialog}
+              onCheckedChange={setAutoCloseDialog}
+            />
+            <Label htmlFor="autoClose" className="whitespace-nowrap">
+              {autoCloseDialog ? "Fechar Auto." : "Fechar Manual"}
+            </Label>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
             onClick={actions.toggleScan}
             disabled={!scannerState.hasPermission}
+            className="shrink-0"
           >
             <Camera className="h-4 w-4 mr-2" />
             {scannerState.isScanning ? "Pausar" : "Ler"}
           </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={actions.refresh}
             disabled={!scannerState.hasPermission}
+            className="shrink-0"
           >
             <RefreshCw
               className={`h-4 w-4 ${scannerState.isScanning ? "animate-spin" : ""}`}
             />
           </Button>
+
           {lastScanResult && (
-            <Button variant="secondary" size="sm" onClick={actions.clearResult}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={actions.clearResult}
+              className="shrink-0"
+            >
               Limpar
             </Button>
           )}
 
-          {/* Botão "Outros" */}
           <Button
             variant="default"
             size="sm"
             onClick={addOtherPresence}
             disabled={isAddingOther}
+            className="shrink-0"
           >
             <UserPlus className="h-4 w-4 mr-2" />
             Outros {othersCount ? `(${othersCount})` : ""}
