@@ -6,8 +6,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@iefa/ui";
+import { Button } from "@iefa/ui";
 import type { ProfileAdmin } from "./ProfilesManager";
 
 export default function DeleteUserDialog({

@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import type { Route } from "./+types/adminPanel";
 import { Navigate } from "react-router";
-import { useAuth } from "~/auth/auth";
-import { checkUserLevel } from "~/auth/adminService";
+import { useAuth } from "@iefa/auth";
+import { checkUserLevel } from "@iefa/auth";
 
 // Componentes refatorados
 import AdminHero from "~/components/admin/AdminHero";
 import IndicatorsCard from "~/components/admin/IndicatorsCard";
-import QRAutoCheckinCard from "~/components/admin/QRAutoCheckinCard";
-import LoadingSkeletons from "~/components/admin/LoadingSkeletons";
+import QRAutoCheckinCard from "~/components/admin/QRAutoCheckinCard"; /* 
+import LoadingSkeletons from "~/components/admin/LoadingSkeletons"; */
 
 type AdminStatus = "checking" | "authorized" | "unauthorized";
 
@@ -88,18 +88,14 @@ export default function AdminPanel() {
           mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         }`}
       >
-        {status === "checking" ? (
-          <LoadingSkeletons />
-        ) : (
-          <div className="grid grid-cols-1 gap-6 lg:gap-8">
-            <IndicatorsCard />
-            <QRAutoCheckinCard
-              selectedOm={selectedOm}
-              onChangeSelectedOm={setSelectedOm}
-              status={status}
-            />
-          </div>
-        )}
+        <div className="grid grid-cols-1 gap-6 lg:gap-8">
+          <IndicatorsCard />
+          <QRAutoCheckinCard
+            selectedOm={selectedOm}
+            onChangeSelectedOm={setSelectedOm}
+            status={status}
+          />
+        </div>
       </section>
     </div>
   );

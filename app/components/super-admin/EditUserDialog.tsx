@@ -6,19 +6,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@iefa/ui";
+import { Button } from "@iefa/ui";
+import { Input } from "@iefa/ui";
+import { Label } from "@iefa/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@iefa/ui";
 import type { ProfileAdmin } from "./ProfilesManager";
-import { UserLevelOrNull } from "@/auth/adminService";
+import { UserLevelOrNull } from "@iefa/auth";
 
 export type EditUserPayload = {
   saram: string;

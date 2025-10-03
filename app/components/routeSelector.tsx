@@ -7,16 +7,16 @@ import { useLocation, useNavigate } from "react-router";
 import { Calendar, ScanQrCode } from "lucide-react";
 
 // Importações dos componentes ShadCN UI
-import { Button } from "@/components/ui/button";
+import { Button } from "@iefa/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@iefa/ui";
 
-import type { UserLevelOrNull } from "~/auth/adminService";
+import type { UserLevelOrNull } from "@iefa/auth";
 
 interface RouteSelectorProps {
   userLevel: UserLevelOrNull;

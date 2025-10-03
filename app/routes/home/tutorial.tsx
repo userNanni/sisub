@@ -1,7 +1,7 @@
 // routes/home/tutorial.tsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Button } from "@/components/ui/button";
+import { Button } from "@iefa/ui";
 import Footer from "~/components/Footer";
 import { JSX } from "react";
 import {

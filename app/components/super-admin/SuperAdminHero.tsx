@@ -1,4 +1,4 @@
-import ShieldBadge from "@/components/ShieldBadge";
+import ShieldBadge from "~/components/ShieldBadge";
 
 export default function SuperAdminHero() {
   return (

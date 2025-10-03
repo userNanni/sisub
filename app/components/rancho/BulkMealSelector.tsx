@@ -12,12 +12,12 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { MealButton } from "@/components/MealButton";
-import { MEAL_TYPES } from "@/components/constants/rancho";
+} from "@iefa/ui";
+import { Badge } from "@iefa/ui";
+import { Label } from "@iefa/ui";
+import { Button } from "@iefa/ui";
+import { MealButton } from "~/components/MealButton";
+import { MEAL_TYPES } from "~/components/constants/rancho";
 import { createEmptyDayMeals, type DayMeals } from "~/utils/RanchoUtils";
 
 type ApplyMode = "fill-missing" | "override";

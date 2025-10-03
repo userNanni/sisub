@@ -16,16 +16,16 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@iefa/ui";
 import {
   useRanchoData,
   type PendingChange,
   type Selections,
   type DayUnits,
-} from "@/components/hooks/useRanchoData";
+} from "~/components/hooks/useRanchoData";
 
 import { DefaultUnitSelector } from "~/components/rancho/DefaultUnitSelector";
-import { AlertMessages } from "@/components/AlertMessage";
+import { AlertMessages } from "~/components/AlertMessage";
 import { PendingChangesStatus } from "~/components/rancho/PendingChangesStatus";
 import {
   createEmptyDayMeals,
@@ -34,9 +34,7 @@ import {
   isDateNear,
   type DayMeals,
 } from "~/utils/RanchoUtils";
-import { NEAR_DATE_THRESHOLD } from "@/components/constants/rancho";
-import { DayCardSkeleton } from "~/components/rancho/DayCard";
-import SimplifiedMilitaryStatsSkeleton from "~/components/rancho/SimplifiedMilitaryStatsSkeleton";
+import { NEAR_DATE_THRESHOLD } from "~/components/constants/rancho";
 import BulkMealSelector from "~/components/rancho/BulkMealSelector";
 import type { Route } from "./+types/rancho";
 
@@ -563,7 +561,7 @@ export default function Rancho(): JSX.Element {
         {/* Estatísticas */}
         <section className="rounded-lg border bg-white shadow-sm">
           <div className="p-4 sm:p-5">
-            <Suspense fallback={<SimplifiedMilitaryStatsSkeleton />}>
+            <Suspense >
               <SimplifiedMilitaryStats selections={selections} dates={dates} />
             </Suspense>
           </div>
@@ -574,7 +572,7 @@ export default function Rancho(): JSX.Element {
           <div className="overflow-x-auto pb-2 -mx-2 px-2">
             <div className="flex space-x-4 min-w-max p-1 snap-x snap-mandatory">
               {dayCardsProps.map((cardProps) => (
-                <Suspense fallback={<DayCardSkeleton />} key={cardProps.key}>
+                <Suspense>
                   <div className="snap-start">
                     <DayCard
                       {...cardProps}

@@ -7,10 +7,10 @@ import {
   useReducer,
 } from "react";
 import QrScanner from "qr-scanner";
-import supabase from "@/utils/supabase";
+import supabase from "~/utils/supabase";
 
 // UI & Icons
-import { Button } from "@/components/ui/button";
+import { Button } from "@iefa/ui";
 import { Camera, RefreshCw, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,10 +23,10 @@ import {
 import FiscalDialog from "~/components/presence/FiscalDialog";
 import PresenceTable from "~/components/presence/PresenceTable";
 import { usePresenceManagement } from "~/components/hooks/usePresenceManagement";
-import { Switch } from "~/components/ui/switch";
-import { Label } from "~/components/ui/label";
-import { useAuth } from "~/auth/auth";
-import { checkUserLevel } from "~/auth/adminService";
+import { Switch } from "@iefa/ui";
+import { Label } from "@iefa/ui";
+import { useAuth } from "@iefa/auth";
+import { checkUserLevel } from "@iefa/auth";
 import { Navigate } from "react-router";
 
 // ===== NOVO: Regex de UUID e helper de extração =====

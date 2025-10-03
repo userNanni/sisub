@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import type { Route } from "./+types/superAdminPanel";
 import { Navigate } from "react-router";
-import { useAuth } from "@/auth/auth";
-import { checkUserLevel } from "@/auth/adminService";
-import supabase from "@/utils/supabase";
+import { useAuth } from "@iefa/auth";
+import { checkUserLevel } from "@iefa/auth";
+import supabase from "~/utils/supabase";
 
-import SuperAdminHero from "@/components/super-admin/SuperAdminHero";
-import IndicatorsCard from "@/components/super-admin/IndicatorsCard";
-import ProfilesManager from "@/components/super-admin/ProfilesManager";
+import SuperAdminHero from "~/components/super-admin/SuperAdminHero";
+import IndicatorsCard from "~/components/super-admin/IndicatorsCard";
+import ProfilesManager from "~/components/super-admin/ProfilesManager";
 
 // shadcn/ui
 import {
@@ -17,11 +17,11 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+} from "@iefa/ui";
+import { Label } from "@iefa/ui";
+import { Switch } from "@iefa/ui";
+import { Textarea } from "@iefa/ui";
+import { Button } from "@iefa/ui";
 
 export function meta({}: Route.MetaArgs) {
   return [

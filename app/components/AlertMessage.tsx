@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { CheckCircle, AlertTriangle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@iefa/ui";
+import { Button } from "@iefa/ui";
 
 interface AlertMessagesProps {
   success?: string | null;
@@ -14,7 +14,7 @@ export const AlertMessages = memo<AlertMessagesProps>(
     if (!success && !error) return null;
 
     return (
-      <>
+      <div>
         {success && (
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
@@ -40,7 +40,7 @@ export const AlertMessages = memo<AlertMessagesProps>(
             </AlertDescription>
           </Alert>
         )}
-      </>
+      </div>
     );
   }
 );

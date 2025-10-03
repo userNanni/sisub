@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import supabase from "@/utils/supabase";
+import supabase from "~/utils/supabase";
 import { toast } from "sonner";
 import type { PresenceRecord, MealKey } from "~/utils/FiscalUtils";
 
@@ -110,8 +110,6 @@ export function usePresenceManagement(filters: FiscalFilters) {
     [filters, loadPresence]
   );
 
-  
-
   // Lógica para remover uma presença
   const removePresence = useCallback(
     async (row: PresenceRecord) => {
@@ -132,5 +130,3 @@ export function usePresenceManagement(filters: FiscalFilters) {
 
   return { presences, forecastMap, confirmPresence, removePresence };
 }
-
-

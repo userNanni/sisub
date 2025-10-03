@@ -6,9 +6,11 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+
 import type { Route } from "./+types/root";
-import { AuthProvider } from "./auth/auth";
+import { AuthProvider } from "@iefa/auth";
 import "./app.css";
+import { ThemeProvider } from "./components/theme-provider";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -37,9 +39,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ThemeProvider defaultTheme="light">
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
         <ScrollRestoration />
         <Scripts />
       </body>

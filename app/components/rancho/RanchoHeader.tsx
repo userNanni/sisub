@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@iefa/ui";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -7,11 +7,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogDescription,
-} from "@/components/ui/alert-dialog";
+} from "@iefa/ui";
 import { LogOut, User, Home, QrCode, X } from "lucide-react";
 import { useState, useEffect, useMemo, type JSX } from "react";
-import { checkUserLevel, UserLevelOrNull } from "~/auth/adminService";
-import { AuthContextType } from "~/auth/auth";
+import { checkUserLevel, UserLevelOrNull } from "@iefa/auth";
+import { AuthContextType } from "@iefa/auth";
 import { QRCodeCanvas } from "qrcode.react"; // novo import
 import RouteSelector from "../routeSelector";
 
@@ -50,7 +50,7 @@ export default function RanchoHeader({ user, signOut }: RanchoHeaderProps) {
   };
 
   return (
-    <header className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+    <header className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}

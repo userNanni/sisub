@@ -1,5 +1,5 @@
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
+import { Badge } from "@iefa/ui";
+import { Button } from "@iefa/ui";
 import {
   Table,
   TableBody,
@@ -7,9 +7,9 @@ import {
   TableHeader,
   TableRow,
   TableHead,
-} from "../ui/table";
+} from "@iefa/ui";
 import { Trash2 } from "lucide-react";
-import { formatDate } from "@/utils/RanchoUtils";
+import { formatDate } from "~/utils/RanchoUtils";
 import { MEAL_LABEL, MealKey, PresenceRecord } from "~/utils/FiscalUtils";
 
 interface PresenceTableProps {

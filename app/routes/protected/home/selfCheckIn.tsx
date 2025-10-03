@@ -1,10 +1,10 @@
 // routes/protected/presence/selfCheckin.tsx
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
-import supabase from "@/utils/supabase";
+import supabase from "~/utils/supabase";
 import { toast } from "sonner";
 import type { MealKey } from "~/utils/FiscalUtils";
-import { Button } from "@/components/ui/button";
+import { Button } from "@iefa/ui";
 
 // Mesmas regras usadas no presence
 function inferDefaultMeal(now: Date = new Date()): MealKey {

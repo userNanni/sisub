@@ -1,6 +1,6 @@
 import * as React from "react";
 import { toast } from "sonner";
-import supabase from "@/utils/supabase";
+import supabase from "~/utils/supabase";
 
 import {
   ColumnDef,
@@ -17,8 +17,8 @@ import {
 
 import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@iefa/ui";
+import { Checkbox } from "@iefa/ui";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -26,8 +26,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+} from "@iefa/ui";
+import { Input } from "@iefa/ui";
 import {
   Table,
   TableBody,
@@ -35,15 +35,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@iefa/ui";
 
 import AddUserDialog, { NewUserPayload } from "./AddUserDialog";
 import EditUserDialog, { EditUserPayload } from "./EditUserDialog";
 import DeleteUserDialog from "./DeleteUserDialog";
-
-import Skeleton from "@/components/Skeleton";
 import { useRancho } from "~/components/hooks/useRancho";
-import { UserLevelOrNull } from "@/auth/adminService";
+import { UserLevelOrNull } from "@iefa/auth";
 
 // Tipos
 export type ProfileAdmin = {
@@ -392,7 +390,7 @@ export default function ProfilesManager() {
   };
 
   // Skeleton inicial (primeira carga)
-  if (loading && profiles.length === 0) {
+  /* if (loading && profiles.length === 0) {
     return (
       <div className="grid grid-cols-1 gap-6 lg:gap-8">
         <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">
@@ -405,7 +403,7 @@ export default function ProfilesManager() {
         </div>
       </div>
     );
-  }
+  } */
 
   return (
     <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm p-6">

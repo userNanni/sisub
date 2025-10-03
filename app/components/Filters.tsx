@@ -5,11 +5,11 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { UnitSelector } from "@/components/UnitSelector";
-import { MEAL_LABEL, MealKey } from "@/utils/FiscalUtils";
+} from "@iefa/ui";
+import { Label } from "@iefa/ui"
+import { Badge } from "@iefa/ui";
+import { UnitSelector } from "~/components/UnitSelector";
+import { MEAL_LABEL, MealKey } from "~/utils/FiscalUtils";
 import { formatDate } from "~/utils/RanchoUtils";
 
 interface FiltersProps {

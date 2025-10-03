@@ -8,7 +8,7 @@ import { ptBR } from "date-fns/locale";
 import {
   useChangelog,
   ChangelogEntry,
-} from "@/components/hooks/useChangeLogData";
+} from "~/components/hooks/useChangeLogData";
 import { Route } from "./+types/changelog";
 
 // Mantido no escopo do componente de view

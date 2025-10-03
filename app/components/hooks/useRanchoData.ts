@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useAuth } from "../../auth/auth";
+import { useAuth } from "@iefa/auth";
 import supabase from "../../utils/supabase";
 
 const DEFAULT_UNIT = "DIRAD - DIRAD";

@@ -1,8 +1,8 @@
 // components/SimplifiedMilitaryStats.tsx
 import { memo, useMemo } from "react";
 import { CalendarDays, Utensils, Clock } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@iefa/ui";
+import { Badge } from "@iefa/ui";
 import type { DayMeals } from "~/utils/RanchoUtils";
 
 interface Selections {

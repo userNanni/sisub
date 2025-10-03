@@ -7,10 +7,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../ui/alert-dialog";
-import { Button } from "../ui/button";
+} from "@iefa/ui";
+import { Button } from "@iefa/ui";
 import type { Dispatch, SetStateAction } from "react";
-import type { DialogState } from "@/utils/FiscalUtils";
+import type { DialogState } from "~/utils/FiscalUtils";
 
 interface FiscalDialogProps {
   setDialog: Dispatch<SetStateAction<DialogState>>;

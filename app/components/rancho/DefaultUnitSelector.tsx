@@ -7,17 +7,17 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+} from "@iefa/ui";
+import { Label } from "@iefa/ui";
+import { Button } from "@iefa/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+} from "@iefa/ui";
+import { Badge } from "@iefa/ui";
 import { useRancho } from "../hooks/useRancho";
 
 interface DefaultUnitSelectorProps {

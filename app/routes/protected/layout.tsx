@@ -1,5 +1,5 @@
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router";
-import { useAuth } from "../../auth/auth";
+import { useAuth } from "@iefa/auth";
 import RanchoHeader from "~/components/rancho/RanchoHeader";
 import { useState, useEffect, useRef } from "react";
 import supabase from "~/utils/supabase";
@@ -13,8 +13,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "~/components/ui/dialog";
-import { Button } from "~/components/ui/button";
+} from "@iefa/ui";
+import { Button } from "@iefa/ui";
 
 type EvaluationResult = {
   shouldAsk: boolean;
