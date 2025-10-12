@@ -8,7 +8,6 @@ import type { Route } from "./+types/home";
 import {
   // Base / gerais
   ChevronRight,
-  Circle,
   Star,
   // Steps
   Calendar,

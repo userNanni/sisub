@@ -12,7 +12,6 @@ import {
   Loader2,
   Settings,
   RefreshCw,
-  Save,
   UtensilsCrossed,
 } from "lucide-react";
 
@@ -35,6 +34,8 @@ import {
   type DayMeals,
 } from "~/utils/RanchoUtils";
 import { NEAR_DATE_THRESHOLD } from "~/components/constants/rancho";
+import { DayCardSkeleton } from "~/components/rancho/DayCard";
+import SimplifiedMilitaryStatsSkeleton from "~/components/rancho/SimplifiedMilitaryStatsSkeleton";
 import BulkMealSelector from "~/components/rancho/BulkMealSelector";
 import type { Route } from "./+types/rancho";
 
@@ -561,7 +562,7 @@ export default function Rancho(): JSX.Element {
         {/* Estatísticas */}
         <section className="rounded-lg border bg-white shadow-sm">
           <div className="p-4 sm:p-5">
-            <Suspense >
+            <Suspense fallback={<SimplifiedMilitaryStatsSkeleton />}>
               <SimplifiedMilitaryStats selections={selections} dates={dates} />
             </Suspense>
           </div>
@@ -572,7 +573,7 @@ export default function Rancho(): JSX.Element {
           <div className="overflow-x-auto pb-2 -mx-2 px-2">
             <div className="flex space-x-4 min-w-max p-1 snap-x snap-mandatory">
               {dayCardsProps.map((cardProps) => (
-                <Suspense>
+                <Suspense fallback={<DayCardSkeleton />} key={cardProps.key}>
                   <div className="snap-start">
                     <DayCard
                       {...cardProps}

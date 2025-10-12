@@ -10,7 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import { AuthProvider } from "@iefa/auth";
 import "./app.css";
-import { ThemeProvider } from "./components/theme-provider";
+import { ThemeProvider } from "@iefa/ui";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

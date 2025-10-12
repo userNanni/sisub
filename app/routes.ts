@@ -9,6 +9,7 @@ export default [
   index("routes/home/home.tsx"),
   route("changelog", "routes/home/changelog.tsx"),
   route("tutorial", "routes/home/tutorial.tsx"),
+  route("healthz", "routes/home/health.tsx"),
 
   layout("./auth/layout.tsx", [
     route("login", "./auth/login.tsx"),
@@ -26,10 +27,4 @@ export default [
       "./routes/protected/superAdminPanel/superAdminPanel.tsx"
     ),
   ]),
-
-  // Nova rota API para Power BI
-  route("api/rancho", "./routes/apiRancho.tsx"),
-  route("api/presences", "./routes/apiPresence.tsx"),
-  route("api/opinion", "./routes/apiEvaluation.tsx"),
-  route("api/wherewhowhen", "./routes/apiWhereWhoWhen.tsx"),
 ] satisfies RouteConfig;
