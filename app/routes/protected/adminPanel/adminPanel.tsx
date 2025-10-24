@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Route } from "./+types/adminPanel";
 import { Navigate } from "react-router";
 import { useAuth } from "@iefa/auth";
-import { checkUserLevel } from "@iefa/auth";
+import { checkUserLevel } from "~/components/UserLevel/AdminService";
 
 // Componentes refatorados
 import AdminHero from "~/components/admin/AdminHero";

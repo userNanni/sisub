@@ -9,7 +9,7 @@ export default [
   index("routes/home/home.tsx"),
   route("changelog", "routes/home/changelog.tsx"),
   route("tutorial", "routes/home/tutorial.tsx"),
-  route("healthz", "routes/home/health.tsx"),
+  route("health", "routes/home/health.tsx"),
 
   layout("./auth/layout.tsx", [
     route("login", "./auth/login.tsx"),

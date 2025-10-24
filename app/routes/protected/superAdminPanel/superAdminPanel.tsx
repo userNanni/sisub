@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Route } from "./+types/superAdminPanel";
 import { Navigate } from "react-router";
 import { useAuth } from "@iefa/auth";
-import { checkUserLevel } from "@iefa/auth";
+import { checkUserLevel } from "~/components/UserLevel/AdminService";
 import supabase from "~/utils/supabase";
 
 import SuperAdminHero from "~/components/super-admin/SuperAdminHero";

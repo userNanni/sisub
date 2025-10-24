@@ -26,7 +26,7 @@ import { usePresenceManagement } from "~/components/hooks/usePresenceManagement"
 import { Switch } from "@iefa/ui";
 import { Label } from "@iefa/ui";
 import { useAuth } from "@iefa/auth";
-import { checkUserLevel } from "@iefa/auth";
+import { checkUserLevel } from "~/components/UserLevel/AdminService";
 import { Navigate } from "react-router";
 
 // ===== NOVO: Regex de UUID e helper de extração =====
